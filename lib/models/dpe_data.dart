@@ -34,6 +34,9 @@ class DpeData {
   @JsonKey(name: 'estimation_ges', defaultValue: 0)
   final int gesValue;
 
+  @JsonKey(name: 'surface_thermique_lot', defaultValue: 0)
+  final double surface;
+
   DpeData({
     required this.id,
     required this.address,
@@ -45,6 +48,7 @@ class DpeData {
     required this.energyValue,
     required this.gesGrade,
     required this.gesValue,
+    required this.surface,
   });
 
   String get formattedDate {
@@ -57,7 +61,23 @@ class DpeData {
     }
   }
 
-  factory DpeData.fromJson(Map<String, dynamic> json) =>
-      _$DpeDataFromJson(json);
+  factory DpeData.fromJson(Map<String, dynamic> json) {
+    json['_id'] ??= json['id'];
+    json['adresse_complete'] ??= json['Adresse_brute'];
+    json['geo_adresse'] ??= json['Adresse_brute'];
+    json['classe_consommation_energie'] ??= json['Etiquette_DPE'];
+    json['date_etablissement_dpe'] ??= json['Date_établissement_DPE'];
+    json['surface_thermique_lot'] ??= json['Surface_habitable_logement'];
+    final coordinates = json['_geopoint'] as String;
+    if (coordinates.isNotEmpty) {
+      final listCoord =
+          coordinates.split(',').map((e) => double.parse(e)).toList();
+
+      json['latitude'] = listCoord[0];
+      json['longitude'] = listCoord[1];
+    }
+    return _$DpeDataFromJson(json);
+  }
+
   Map<String, dynamic> toJson() => _$DpeDataToJson(this);
 }

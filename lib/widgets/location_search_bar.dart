@@ -39,7 +39,7 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
   Future<void> _loadDepartments() async {
     try {
       final departments = await _geoApiService.getDepartments();
-      print(departments[0].geometry);
+      //print(departments[0].geometry);
       setState(() {
         _departments = departments;
       });

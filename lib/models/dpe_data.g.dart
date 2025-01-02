@@ -17,6 +17,7 @@ DpeData _$DpeDataFromJson(Map<String, dynamic> json) => DpeData(
       energyValue: (json['conso_energie'] as num?)?.toInt() ?? 0,
       gesGrade: json['classe_estimation_ges'] as String? ?? 'N/A',
       gesValue: (json['estimation_ges'] as num?)?.toInt() ?? 0,
+      surface: (json['surface_thermique_lot'] as num?)?.toDouble() ?? 0,
     );
 
 Map<String, dynamic> _$DpeDataToJson(DpeData instance) => <String, dynamic>{
@@ -30,4 +31,5 @@ Map<String, dynamic> _$DpeDataToJson(DpeData instance) => <String, dynamic>{
       'conso_energie': instance.energyValue,
       'classe_estimation_ges': instance.gesGrade,
       'estimation_ges': instance.gesValue,
+      'surface_thermique_lot': instance.surface,
     };

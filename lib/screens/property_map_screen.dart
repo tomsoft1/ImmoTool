@@ -10,6 +10,7 @@ import '../services/geo_api_service.dart';
 import '../models/dpe_data.dart';
 import '../models/dvf_data.dart';
 import '../widgets/location_search_bar.dart';
+import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 
 enum DataLayer { dpe, dvf, both }
 
@@ -40,6 +41,9 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
   Commune? _selectedCommune;
   bool _isLoadingBoundaries = false;
   bool _isLoadingData = false;
+  bool _showPropertiesLayer = true;
+  bool _showDpeV1Layer = true;
+  bool _showDpeV2Layer = true;
 
   @override
   void initState() {
@@ -247,9 +251,11 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
   Future<void> _loadDpeData() async {
     try {
       final bbox = _calculateBoundingBox();
-      final dpeDataList = await _dpeService.getDpeData(
+      //   final dpeDataList = await _dpeService.getDpeData(
+      //       lat: _center.latitude, lng: _center.longitude, bbox: bbox);
+      final dpeDataList = await _dpeService.getDpeDataV1(
           lat: _center.latitude, lng: _center.longitude, bbox: bbox);
-      print(dpeDataList);
+//      print(dpeDataList);
       setState(() {
         _dpeMarkers = _getFilteredDpeMarkers(dpeDataList);
       });
@@ -350,7 +356,7 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
             const SizedBox(height: 8),
             Text('Grade: ${dpe.energyGrade}'),
             Text('Energy: ${dpe.energyValue} kWh/m²/an'),
-            Text('GES: ${dpe.gesGrade} - ${dpe.gesValue} kgCO₂/m²/an'),
+            Text('Surface: ${dpe.surface} m²'),
             Text('Address: ${dpe.geoAddress}'),
             Text('Date: ${dpe.formattedDate}'),
           ],
@@ -620,6 +626,31 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
               ],
             ),
           ),
+          Positioned(
+            top: 50,
+            right: 10,
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Layers', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    _buildLayerToggle('Properties', _showPropertiesLayer, (value) {
+                      setState(() => _showPropertiesLayer = value);
+                    }),
+                    _buildLayerToggle('DPE V1', _showDpeV1Layer, (value) {
+                      setState(() => _showDpeV1Layer = value);
+                    }),
+                    _buildLayerToggle('DPE V2', _showDpeV2Layer, (value) {
+                      setState(() => _showDpeV2Layer = value);
+                    }),
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -627,5 +658,37 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
         child: const Icon(Icons.my_location),
       ),
     );
+  }
+
+  Widget _buildLayerToggle(String label, bool value, ValueChanged<bool> onChanged) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Switch(
+          value: value,
+          onChanged: onChanged,
+        ),
+        Text(label),
+      ],
+    );
+  }
+
+  // Update your marker filtering logic based on layer visibility
+  List<Marker> _getFilteredMarkers() {
+    final markers = <Marker>[];
+    
+    if (_showPropertiesLayer) {
+      // Add property markers
+    }
+    
+    if (_showDpeV1Layer) {
+      // Add DPE V1 markers
+    }
+    
+    if (_showDpeV2Layer) {
+      // Add DPE V2 markers
+    }
+    
+    return markers;
   }
 }
