@@ -163,7 +163,6 @@ class DvfData {
     if (value is double) return value.round();
     if (value is String) {
       try {
-        print(value);
         // Remove any non-numeric characters and convert to integer
         return double.parse(value).toInt() ?? 0;
       } catch (e) {
