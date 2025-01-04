@@ -15,7 +15,7 @@ class AdemeApiService {
     required String bbox,
   }) async {
     final queryParams = {
-      'size': '1000',
+      'size': '100',
       'select': '*',
       'qs': 'date_etablissement_dpe:[2024-01-01 TO 2024-11-17]',
 //          'date_etablissement_dpe:[2024-01-01 TO 2024-11-17] AND classe_consommation_energie:("G" OR "F")',
@@ -65,11 +65,11 @@ class AdemeApiService {
   Future<List<DpeData>> getDpeDataV1({
     required double lat,
     required double lng,
-    double radius = 100,
+    double radius = 1000,
     required String bbox,
   }) async {
     final queryParams = {
-      'size': '1000',
+      'size': '100',
 //      'select': '*',
       'select':
           'Adresse_brute,Etiquette_DPE,Date_établissement_DPE,_geopoint,_id,Surface_habitable_logement',

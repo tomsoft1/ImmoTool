@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:collection/collection.dart';
 import 'dart:math' show log, tan, cos, sin, sqrt, atan2;
 import 'dart:async' show Timer;
 import '../services/ademe_api_service.dart';
@@ -9,6 +10,7 @@ import '../services/dvf_api_service.dart';
 import '../services/geo_api_service.dart';
 import '../models/dpe_data.dart';
 import '../models/dvf_data.dart';
+import '../models/parcel_data.dart';
 import '../widgets/location_search_bar.dart';
 //import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 
@@ -43,6 +45,7 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
   bool _isLoadingBoundaries = false;
   bool _isLoadingData = false;
   bool _showParcels = true;
+  String? _selectedParcelId;
 
   @override
   void initState() {
@@ -258,10 +261,15 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
           parcelPolygons.add(
             Polygon(
               points: polygonPoints.first,
-              color: Colors.blue.withOpacity(0.1),
-              borderColor: Colors.blue.shade300,
-              borderStrokeWidth: 0.5,
+              color: parcel.id == _selectedParcelId 
+                ? Colors.blue.withOpacity(0.4)
+                : Colors.blue.withOpacity(0.1),
+              borderColor: parcel.id == _selectedParcelId 
+                ? Colors.blue.shade700
+                : Colors.blue.shade300,
+              borderStrokeWidth: parcel.id == _selectedParcelId ? 2.0 : 0.5,
               isDotted: false,
+              label: parcel.id,
             ),
           );
         }
@@ -273,6 +281,44 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
     } catch (e) {
       debugPrint('Error loading parcels: $e');
     }
+  }
+
+  void _showParcelInfo(ParcelData parcel) {
+    setState(() {
+      _selectedParcelId = parcel.id;
+    });
+    _loadParcels(_selectedCommune?.code ?? "75111");
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Parcel Information',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text('ID: ${parcel.id}'),
+            Text('Commune: ${parcel.communeCode}'),
+            Text('Section: ${parcel.section}'),
+            Text('Number: ${parcel.number}'),
+            Text('Area: ${parcel.area}m²'),
+            Text('Created: ${parcel.createdDate}'),
+            Text('Updated: ${parcel.updatedDate}'),
+          ],
+        ),
+      ),
+    ).then((_) {
+      // Clear selection when bottom sheet is closed
+      setState(() {
+        _selectedParcelId = null;
+      });
+      _loadParcels(_selectedCommune?.code ?? "75111");
+    });
   }
 
   String _calculateBoundingBox() {
@@ -488,8 +534,8 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
             polygons.map((points) => Polygon(
                   points: points,
                   color: Colors.blue.withOpacity(0.1),
-                  borderColor: Colors.blue.shade700,
-                  borderStrokeWidth: 2,
+                  borderColor: Colors.black54,
+                  borderStrokeWidth: 0.5,
                   isDotted: false,
                 )),
           );
@@ -546,6 +592,24 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
         _loadData();
       });
     }
+  }
+
+  // Add this helper method to check if a point is inside a polygon
+  bool _isPointInPolygon(LatLng point, List<LatLng> polygon) {
+    bool isInside = false;
+    int i = 0, j = polygon.length - 1;
+    
+    for (i = 0; i < polygon.length; i++) {
+      if (((polygon[i].latitude > point.latitude) != (polygon[j].latitude > point.latitude)) &&
+          (point.longitude < (polygon[j].longitude - polygon[i].longitude) * 
+          (point.latitude - polygon[i].latitude) / 
+          (polygon[j].latitude - polygon[i].latitude) + polygon[i].longitude)) {
+        isInside = !isInside;
+      }
+      j = i;
+    }
+    
+    return isInside;
   }
 
   @override
@@ -621,6 +685,23 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
               center: _center,
               zoom: 15,
               onPositionChanged: _handleMapMovement,
+              onTap: (tapPosition, point) {
+                // Find tapped parcel
+                for (final polygon in _parcelBoundaries) {
+                  if (polygon.label != null && _isPointInPolygon(point, polygon.points)) {
+                    // Find and show parcel info
+                    _dvfService.getParcelles(_selectedCommune?.code ?? "75111").then((parcels) {
+                      final tappedParcel = parcels.firstWhereOrNull(
+                        (p) => p.id == polygon.label,
+                      );
+                      if (tappedParcel != null) {
+                        _showParcelInfo(tappedParcel);
+                      }
+                    });
+                    break;
+                  }
+                }
+              },
             ),
             children: [
               TileLayer(
