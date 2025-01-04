@@ -65,7 +65,7 @@ class AdemeApiService {
   Future<List<DpeData>> getDpeDataV1({
     required double lat,
     required double lng,
-    double radius = 1000,
+    double radius = 100,
     required String bbox,
   }) async {
     final queryParams = {

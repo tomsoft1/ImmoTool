@@ -34,6 +34,7 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
   List<Marker> _dvfMarkers = [];
   List<Polygon> _departmentBoundaries = [];
   List<Polygon> _communeBoundaries = [];
+  List<Polygon> _parcelBoundaries = [];
   LatLng _center = const LatLng(48.8566, 2.3522);
   DpeGrade _selectedGrade = DpeGrade.all;
   DataLayer _selectedLayer = DataLayer.both;
@@ -41,6 +42,7 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
   Commune? _selectedCommune;
   bool _isLoadingBoundaries = false;
   bool _isLoadingData = false;
+  bool _showParcels = true;
 
   @override
   void initState() {
@@ -93,6 +95,9 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
       if (_selectedLayer == DataLayer.dvf || _selectedLayer == DataLayer.both) {
         print('load DVF');
         await _loadDvfData();
+      }
+      if (_showParcels) {
+        await _loadParcels("75111");
       }
     } finally {
       setState(() {
@@ -227,12 +232,46 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
         orElse: () => Department(code: '', name: '', region: ''),
       );
       _updateBoundaries(_selectedDepartment?.geometry, isDepartment: true);
+
+      // Load parcels when commune is selected
+      if (_showParcels) {
+//        await _loadParcels(commune.code);
+        await _loadParcels("75111");
+      }
     } catch (e) {
       debugPrint('Error loading department: $e');
     } finally {
       setState(() {
         _isLoadingBoundaries = false;
       });
+    }
+  }
+
+  Future<void> _loadParcels(String communeCode) async {
+    try {
+      final parcels = await _dvfService.getParcelles(communeCode);
+      final List<Polygon> parcelPolygons = [];
+
+      for (final parcel in parcels) {
+        final polygonPoints = parcel.getPolygonPoints();
+        if (polygonPoints.isNotEmpty) {
+          parcelPolygons.add(
+            Polygon(
+              points: polygonPoints.first,
+              color: Colors.blue.withOpacity(0.1),
+              borderColor: Colors.blue.shade300,
+              borderStrokeWidth: 0.5,
+              isDotted: false,
+            ),
+          );
+        }
+      }
+
+      setState(() {
+        _parcelBoundaries = parcelPolygons;
+      });
+    } catch (e) {
+      debugPrint('Error loading parcels: $e');
     }
   }
 
@@ -285,8 +324,8 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
         .map((dpe) {
       return Marker(
         point: LatLng(dpe.latitude, dpe.longitude),
-        width: 40,
-        height: 40,
+        width: 30,
+        height: 30,
         child: GestureDetector(
           onTap: () => _showDpeInfo(dpe),
           child: Container(
@@ -529,6 +568,23 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
                 ),
               ),
             ),
+          // Add parcel toggle switch
+          if (_selectedCommune != null)
+            Switch(
+              value: _showParcels,
+              onChanged: (value) async {
+                setState(() {
+                  _showParcels = value;
+                  if (!value) {
+                    _parcelBoundaries.clear();
+                  }
+                });
+                if (value && _selectedCommune != null) {
+                  await _loadParcels(_selectedCommune!.code);
+                }
+              },
+              activeColor: Colors.orange,
+            ),
           PopupMenuButton<DataLayer>(
             icon: const Icon(Icons.layers),
             tooltip: 'Select layers',
@@ -572,7 +628,11 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
                 userAgentPackageName: 'com.example.app',
               ),
               PolygonLayer(
-                polygons: [..._departmentBoundaries, ..._communeBoundaries],
+                polygons: [
+                  ..._departmentBoundaries,
+                  ..._communeBoundaries,
+                  ..._parcelBoundaries,
+                ],
               ),
               MarkerLayer(
                 markers: [
