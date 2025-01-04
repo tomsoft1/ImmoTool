@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'dart:math' show pi, log, tan, cos, sin, sqrt, atan2;
+import 'dart:math' show log, tan, cos, sin, sqrt, atan2;
 import 'dart:async' show Timer;
 import '../services/ademe_api_service.dart';
 import '../services/dvf_api_service.dart';
@@ -10,7 +10,7 @@ import '../services/geo_api_service.dart';
 import '../models/dpe_data.dart';
 import '../models/dvf_data.dart';
 import '../widgets/location_search_bar.dart';
-import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
+//import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 
 enum DataLayer { dpe, dvf, both }
 
@@ -41,9 +41,6 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
   Commune? _selectedCommune;
   bool _isLoadingBoundaries = false;
   bool _isLoadingData = false;
-  bool _showPropertiesLayer = true;
-  bool _showDpeV1Layer = true;
-  bool _showDpeV2Layer = true;
 
   @override
   void initState() {
@@ -533,6 +530,8 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
               ),
             ),
           PopupMenuButton<DataLayer>(
+            icon: const Icon(Icons.layers),
+            tooltip: 'Select layers',
             initialValue: _selectedLayer,
             onSelected: (DataLayer layer) {
               setState(() {
@@ -555,6 +554,7 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
               ),
             ],
           ),
+          const SizedBox(width: 8), // Add some padding at the end
         ],
       ),
       body: Stack(
@@ -626,31 +626,6 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
               ],
             ),
           ),
-          Positioned(
-            top: 50,
-            right: 10,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Layers', style: Theme.of(context).textTheme.titleMedium),
-                    const SizedBox(height: 8),
-                    _buildLayerToggle('Properties', _showPropertiesLayer, (value) {
-                      setState(() => _showPropertiesLayer = value);
-                    }),
-                    _buildLayerToggle('DPE V1', _showDpeV1Layer, (value) {
-                      setState(() => _showDpeV1Layer = value);
-                    }),
-                    _buildLayerToggle('DPE V2', _showDpeV2Layer, (value) {
-                      setState(() => _showDpeV2Layer = value);
-                    }),
-                  ],
-                ),
-              ),
-            ),
-          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
@@ -658,37 +633,5 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
         child: const Icon(Icons.my_location),
       ),
     );
-  }
-
-  Widget _buildLayerToggle(String label, bool value, ValueChanged<bool> onChanged) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Switch(
-          value: value,
-          onChanged: onChanged,
-        ),
-        Text(label),
-      ],
-    );
-  }
-
-  // Update your marker filtering logic based on layer visibility
-  List<Marker> _getFilteredMarkers() {
-    final markers = <Marker>[];
-    
-    if (_showPropertiesLayer) {
-      // Add property markers
-    }
-    
-    if (_showDpeV1Layer) {
-      // Add DPE V1 markers
-    }
-    
-    if (_showDpeV2Layer) {
-      // Add DPE V2 markers
-    }
-    
-    return markers;
   }
 }

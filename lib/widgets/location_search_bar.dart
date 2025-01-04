@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import '../services/geo_api_service.dart';
-import 'dart:developer';
+//import 'dart:developer';
 
 class LocationSearchBar extends StatefulWidget {
   final Function(Commune) onCommuneSelected;
