@@ -11,24 +11,39 @@ class DvfApiService {
   // Cache for parcel data
   final Map<String, List<ParcelData>> _parcelCache = {};
   final Map<String, DateTime> _parcelCacheTimestamp = {};
+  // Cache for DVF data
+  final Map<String, List<DvfData>> _dvfCache = {};
+  final Map<String, DateTime> _dvfCacheTimestamp = {};
   static const Duration _cacheDuration = Duration(hours: 24);
 
+  String _getDvfCacheKey(String communeCode, String parcelCode) {
+    return '${communeCode}_${parcelCode}';
+  }
+
   Future<List<DvfData>> getDvfData({
-    required double lat,
-    required double lng,
-    double radius = 1000,
+    required String communeCode,
+    required String parcelCode,
     String? startDate,
     String? endDate,
   }) async {
+    final cacheKey = _getDvfCacheKey(communeCode, parcelCode);
+
+    // Check cache first
+    if (_dvfCache.containsKey(cacheKey)) {
+      final timestamp = _dvfCacheTimestamp[cacheKey];
+      if (timestamp != null &&
+          DateTime.now().difference(timestamp) < _cacheDuration) {
+        debugPrint('Returning cached DVF data for $cacheKey');
+        return _dvfCache[cacheKey]!;
+      }
+    }
+
     final queryParams = {
-      'lat': lat.toString(),
-      'lon': lng.toString(),
-      'radius': radius.toString(),
       if (startDate != null) 'start_date': startDate,
       if (endDate != null) 'end_date': endDate,
     };
 
-    final uri = Uri.parse('$baseUrl/mutations3/75104/000AF')
+    final uri = Uri.parse('$baseUrl/mutations3/$communeCode/$parcelCode')
         .replace(queryParameters: queryParams);
 
     try {
@@ -40,29 +55,35 @@ class DvfApiService {
         },
       );
 
-      print('Fetching DVF data from: ${uri.toString()}');
+      debugPrint('Fetching DVF data from: ${uri.toString()}');
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        print('Found ${data['mutations']?.length ?? 0} DVF entries');
+        debugPrint('Found ${data['mutations']?.length ?? 0} DVF entries');
 
         if (data['mutations'] == null) {
           return [];
         }
 
-        return (data['mutations'] as List)
+        final List<DvfData> dvfDataList = (data['mutations'] as List)
             .where((json) =>
                 json != null &&
                 json['latitude'] != null &&
                 json['longitude'] != null)
             .map((json) => DvfData.fromJson(json))
             .toList();
+
+        // Update cache
+        _dvfCache[cacheKey] = dvfDataList;
+        _dvfCacheTimestamp[cacheKey] = DateTime.now();
+
+        return dvfDataList;
       } else {
-        print('API Error: ${response.statusCode} - ${response.body}');
+        debugPrint('API Error: ${response.statusCode} - ${response.body}');
         throw Exception('Failed to load DVF data: ${response.statusCode}');
       }
     } catch (e) {
-      print('API Exception: $e');
+      debugPrint('API Exception: $e');
       throw Exception('Error fetching DVF data: $e');
     }
   }
@@ -114,8 +135,10 @@ class DvfApiService {
     }
   }
 
-  void clearParcelCache() {
+  void clearCache() {
     _parcelCache.clear();
     _parcelCacheTimestamp.clear();
+    _dvfCache.clear();
+    _dvfCacheTimestamp.clear();
   }
 }

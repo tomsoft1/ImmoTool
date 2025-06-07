@@ -33,6 +33,7 @@ DvfData _$DvfDataFromJson(Map<String, dynamic> json) => DvfData(
           ? 0
           : DvfData._parseRooms(json['nombre_pieces_principales']),
       propertyType: json['type_local'] as String? ?? '',
+      section: json['section_cadastrale'] as String? ?? '',
     );
 
 Map<String, dynamic> _$DvfDataToJson(DvfData instance) => <String, dynamic>{
@@ -50,4 +51,5 @@ Map<String, dynamic> _$DvfDataToJson(DvfData instance) => <String, dynamic>{
       'surface_reelle_bati': instance.buildingArea,
       'nombre_pieces_principales': instance.numberOfRooms,
       'type_local': instance.propertyType,
+      'section_cadastrale': instance.section,
     };

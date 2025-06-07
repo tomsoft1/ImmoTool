@@ -16,6 +16,7 @@ ParcelData _$ParcelDataFromJson(Map<String, dynamic> json) => ParcelData(
       geometry: json['geometry'] as Map<String, dynamic>,
       createdDate: json['created'] as String,
       updatedDate: json['updated'] as String,
+      parcelId: json['id_parcelle'] as String? ?? '',
     );
 
 Map<String, dynamic> _$ParcelDataToJson(ParcelData instance) =>
@@ -29,4 +30,5 @@ Map<String, dynamic> _$ParcelDataToJson(ParcelData instance) =>
       'geometry': instance.geometry,
       'created': instance.createdDate,
       'updated': instance.updatedDate,
+      'id_parcelle': instance.parcelId,
     };

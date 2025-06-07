@@ -32,6 +32,9 @@ class ParcelData {
   @JsonKey(name: 'updated')
   final String updatedDate;
 
+  @JsonKey(name: 'id_parcelle', defaultValue: '')
+  final String parcelId;
+
   ParcelData({
     required this.id,
     required this.communeCode,
@@ -42,6 +45,7 @@ class ParcelData {
     required this.geometry,
     required this.createdDate,
     required this.updatedDate,
+    required this.parcelId,
   });
 
   factory ParcelData.fromJson(Map<String, dynamic> json) =>

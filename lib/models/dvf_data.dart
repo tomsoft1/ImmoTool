@@ -47,6 +47,9 @@ class DvfData {
   @JsonKey(name: 'type_local', defaultValue: '')
   final String propertyType;
 
+  @JsonKey(name: 'section_cadastrale', defaultValue: '')
+  final String section;
+
   DvfData({
     required this.id,
     required this.transactionDate,
@@ -62,6 +65,7 @@ class DvfData {
     required this.buildingArea,
     required this.numberOfRooms,
     required this.propertyType,
+    required this.section,
   });
 
   String get fullAddress {

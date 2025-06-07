@@ -261,12 +261,12 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
           parcelPolygons.add(
             Polygon(
               points: polygonPoints.first,
-              color: parcel.id == _selectedParcelId 
-                ? Colors.blue.withOpacity(0.4)
-                : Colors.blue.withOpacity(0.1),
-              borderColor: parcel.id == _selectedParcelId 
-                ? Colors.blue.shade700
-                : Colors.blue.shade300,
+              color: parcel.id == _selectedParcelId
+                  ? Colors.blue.withOpacity(0.4)
+                  : Colors.blue.withOpacity(0.1),
+              borderColor: parcel.id == _selectedParcelId
+                  ? Colors.blue.shade700
+                  : Colors.blue.shade300,
               borderStrokeWidth: parcel.id == _selectedParcelId ? 2.0 : 0.5,
               isDotted: false,
               label: parcel.id,
@@ -283,42 +283,112 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
     }
   }
 
-  void _showParcelInfo(ParcelData parcel) {
+  void _showParcelInfo(ParcelData parcel) async {
     setState(() {
       _selectedParcelId = parcel.id;
     });
     _loadParcels(_selectedCommune?.code ?? "75111");
 
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Parcel Information',
-              style: Theme.of(context).textTheme.titleLarge,
+    // Load DVF data for the selected parcel
+    try {
+      // Load DVF data using parcel ID
+      final dvfDataList = await _dvfService.getDvfData(
+        communeCode: parcel.communeCode,
+        parcelCode: parcel.parcelId.isEmpty ? parcel.prefix + parcel.section : parcel.parcelId,
+      );
+
+      // Sort transactions by date, most recent first
+      dvfDataList.sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
+
+      showModalBottomSheet(
+        context: context,
+        builder: (context) => Container(
+          padding: const EdgeInsets.all(16),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Parcel Information',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 8),
+                Text('ID: ${parcel.id}'),
+                Text('Commune: ${parcel.communeCode}'),
+                Text('Section: ${parcel.section}'),
+                Text('Number: ${parcel.number}'),
+                Text('Area: ${parcel.area}m²'),
+                if (dvfDataList.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Text(
+                    'Transaction History (${dvfDataList.length})',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  ...dvfDataList.map((dvf) => Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Date: ${dvf.formattedDate}'),
+                          Text('Price: ${dvf.price.toStringAsFixed(2)}€'),
+                          Text('Type: ${dvf.propertyType}'),
+                          if (dvf.buildingArea > 0)
+                            Text('Area: ${dvf.buildingArea}m²'),
+                          if (dvf.numberOfRooms > 0)
+                            Text('Rooms: ${dvf.numberOfRooms}'),
+                          Text('Section: ${dvf.section}'),
+                        ],
+                      ),
+                    ),
+                  )).toList(),
+                ] else
+                  const Text('No transaction history found for this parcel'),
+              ],
             ),
-            const SizedBox(height: 8),
-            Text('ID: ${parcel.id}'),
-            Text('Commune: ${parcel.communeCode}'),
-            Text('Section: ${parcel.section}'),
-            Text('Number: ${parcel.number}'),
-            Text('Area: ${parcel.area}m²'),
-            Text('Created: ${parcel.createdDate}'),
-            Text('Updated: ${parcel.updatedDate}'),
-          ],
+          ),
         ),
-      ),
-    ).then((_) {
-      // Clear selection when bottom sheet is closed
-      setState(() {
-        _selectedParcelId = null;
+      ).then((_) {
+        setState(() {
+          _selectedParcelId = null;
+        });
+        _loadParcels(_selectedCommune?.code ?? "75111");
       });
-      _loadParcels(_selectedCommune?.code ?? "75111");
-    });
+    } catch (e) {
+      debugPrint('Error loading DVF data for parcel: $e');
+      // Show parcel info without DVF data if there's an error
+      showModalBottomSheet(
+        context: context,
+        builder: (context) => Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Parcel Information',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              Text('ID: ${parcel.id}'),
+              Text('Commune: ${parcel.communeCode}'),
+              Text('Section: ${parcel.section}'),
+              Text('Number: ${parcel.number}'),
+              Text('Area: ${parcel.area}m²'),
+              const Text('Error loading transaction history'),
+            ],
+          ),
+        ),
+      ).then((_) {
+        setState(() {
+          _selectedParcelId = null;
+        });
+        _loadParcels(_selectedCommune?.code ?? "75111");
+      });
+    }
   }
 
   String _calculateBoundingBox() {
@@ -349,10 +419,8 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
   Future<void> _loadDvfData() async {
     try {
       final dvfDataList = await _dvfService.getDvfData(
-        lat: _center.latitude,
-        lng: _center.longitude,
-        radius: 1000,
-      );
+          communeCode: _selectedCommune?.code ?? "75111",
+          parcelCode: _selectedParcelId ?? "000BK");
 
       setState(() {
         _dvfMarkers = _getDvfMarkers(dvfDataList);
@@ -598,17 +666,20 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
   bool _isPointInPolygon(LatLng point, List<LatLng> polygon) {
     bool isInside = false;
     int i = 0, j = polygon.length - 1;
-    
+
     for (i = 0; i < polygon.length; i++) {
-      if (((polygon[i].latitude > point.latitude) != (polygon[j].latitude > point.latitude)) &&
-          (point.longitude < (polygon[j].longitude - polygon[i].longitude) * 
-          (point.latitude - polygon[i].latitude) / 
-          (polygon[j].latitude - polygon[i].latitude) + polygon[i].longitude)) {
+      if (((polygon[i].latitude > point.latitude) !=
+              (polygon[j].latitude > point.latitude)) &&
+          (point.longitude <
+              (polygon[j].longitude - polygon[i].longitude) *
+                      (point.latitude - polygon[i].latitude) /
+                      (polygon[j].latitude - polygon[i].latitude) +
+                  polygon[i].longitude)) {
         isInside = !isInside;
       }
       j = i;
     }
-    
+
     return isInside;
   }
 
@@ -688,9 +759,12 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
               onTap: (tapPosition, point) {
                 // Find tapped parcel
                 for (final polygon in _parcelBoundaries) {
-                  if (polygon.label != null && _isPointInPolygon(point, polygon.points)) {
+                  if (polygon.label != null &&
+                      _isPointInPolygon(point, polygon.points)) {
                     // Find and show parcel info
-                    _dvfService.getParcelles(_selectedCommune?.code ?? "75111").then((parcels) {
+                    _dvfService
+                        .getParcelles(_selectedCommune?.code ?? "75111")
+                        .then((parcels) {
                       final tappedParcel = parcels.firstWhereOrNull(
                         (p) => p.id == polygon.label,
                       );
