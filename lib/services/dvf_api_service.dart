@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show debugPrint;
-import '../models/dvf_data.dart';
+import 'package:immo_tools/models/immo_data_dvf.dart';
 import '../models/parcel_data.dart';
 
 class DvfApiService {
@@ -12,7 +12,7 @@ class DvfApiService {
   final Map<String, List<ParcelData>> _parcelCache = {};
   final Map<String, DateTime> _parcelCacheTimestamp = {};
   // Cache for DVF data
-  final Map<String, List<DvfData>> _dvfCache = {};
+  final Map<String, List<ImmoDataDvf>> _dvfCache = {};
   final Map<String, DateTime> _dvfCacheTimestamp = {};
   static const Duration _cacheDuration = Duration(hours: 24);
 
@@ -20,7 +20,7 @@ class DvfApiService {
     return '${communeCode}_${parcelCode}';
   }
 
-  Future<List<DvfData>> getDvfData({
+  Future<List<ImmoDataDvf>> getDvfData({
     required String communeCode,
     required String parcelCode,
     String? startDate,
@@ -65,12 +65,12 @@ class DvfApiService {
           return [];
         }
 
-        final List<DvfData> dvfDataList = (data['mutations'] as List)
+        final List<ImmoDataDvf> dvfDataList = (data['mutations'] as List)
             .where((json) =>
                 json != null &&
                 json['latitude'] != null &&
                 json['longitude'] != null)
-            .map((json) => DvfData.fromJson(json))
+            .map((json) => ImmoDataDvf.fromJson(json))
             .toList();
 
         // Update cache

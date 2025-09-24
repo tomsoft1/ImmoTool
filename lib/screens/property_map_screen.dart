@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:immo_tools/models/immo_data_dvf.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:collection/collection.dart';
 import 'dart:math' show log, tan, cos, sin, sqrt, atan2;
 import 'dart:async' show Timer;
+import 'package:provider/provider.dart';
 import '../services/ademe_api_service.dart';
 import '../services/dvf_api_service.dart';
 import '../services/geo_api_service.dart';
 import '../models/dpe_data.dart';
-import '../models/dvf_data.dart';
 import '../models/parcel_data.dart';
 import '../widgets/location_search_bar.dart';
+import '../providers/settings_provider.dart';
+import 'settings_screen.dart';
 //import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 
 enum DataLayer { dpe, dvf, both }
@@ -294,11 +297,13 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
       // Load DVF data using parcel ID
       final dvfDataList = await _dvfService.getDvfData(
         communeCode: parcel.communeCode,
-        parcelCode: parcel.parcelId.isEmpty ? parcel.prefix + parcel.section : parcel.parcelId,
+        parcelCode: parcel.parcelId.isEmpty
+            ? parcel.prefix + parcel.section
+            : parcel.parcelId,
       );
 
       // Sort transactions by date, most recent first
-      dvfDataList.sort((a, b) => b.transactionDate.compareTo(a.transactionDate));
+      dvfDataList.sort((a, b) => b.txDate.compareTo(a.txDate));
 
       showModalBottomSheet(
         context: context,
@@ -326,25 +331,27 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  ...dvfDataList.map((dvf) => Card(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Date: ${dvf.formattedDate}'),
-                          Text('Price: ${dvf.price.toStringAsFixed(2)}€'),
-                          Text('Type: ${dvf.propertyType}'),
-                          if (dvf.buildingArea > 0)
-                            Text('Area: ${dvf.buildingArea}m²'),
-                          if (dvf.numberOfRooms > 0)
-                            Text('Rooms: ${dvf.numberOfRooms}'),
-                          Text('Section: ${dvf.section}'),
-                        ],
-                      ),
-                    ),
-                  )).toList(),
+                  ...dvfDataList
+                      .map((dvf) => Card(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Date: ${dvf.txDate}'),
+                                  Text(
+                                      'Price: ${dvf.price.toStringAsFixed(2)}€'),
+                                  Text('Type: ${dvf.realtyType}'),
+                                  if (dvf.attributes.landArea! > 0)
+                                    Text('Area: ${dvf.attributes.landArea}m²'),
+                                  if (dvf.attributes.rooms! > 0)
+                                    Text('Rooms: ${dvf.attributes.rooms}'),
+                                ],
+                              ),
+                            ),
+                          ))
+                      .toList(),
                 ] else
                   const Text('No transaction history found for this parcel'),
               ],
@@ -403,11 +410,12 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
   Future<void> _loadDpeData() async {
     try {
       final bbox = _calculateBoundingBox();
-      //   final dpeDataList = await _dpeService.getDpeData(
-      //       lat: _center.latitude, lng: _center.longitude, bbox: bbox);
+      final settings = context.read<SettingsProvider>();
       final dpeDataList = await _dpeService.getDpeDataV1(
-          lat: _center.latitude, lng: _center.longitude, bbox: bbox);
-//      print(dpeDataList);
+          lat: _center.latitude,
+          lng: _center.longitude,
+          bbox: bbox,
+          settings: settings);
       setState(() {
         _dpeMarkers = _getFilteredDpeMarkers(dpeDataList);
       });
@@ -463,10 +471,11 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
     }).toList();
   }
 
-  List<Marker> _getDvfMarkers(List<DvfData> dvfDataList) {
+  List<Marker> _getDvfMarkers(List<ImmoDataDvf> dvfDataList) {
     return dvfDataList.map((dvf) {
       return Marker(
-        point: LatLng(dvf.latitude, dvf.longitude),
+        point: LatLng(
+            dvf.location.geometry.latitude, dvf.location.geometry.longitude),
         width: 40,
         height: 40,
         child: GestureDetector(
@@ -477,7 +486,7 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 2),
             ),
-            child: Center(
+            child: const Center(
               child: Icon(
                 Icons.euro,
                 color: Colors.white,
@@ -515,7 +524,7 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
     );
   }
 
-  void _showDvfInfo(DvfData dvf) {
+  void _showDvfInfo(ImmoDataDvf dvf) {
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
@@ -530,11 +539,11 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
             ),
             const SizedBox(height: 8),
             Text('Price: ${dvf.price.toStringAsFixed(2)}€'),
-            Text('Type: ${dvf.propertyType}'),
-            Text('Rooms: ${dvf.numberOfRooms}'),
-            Text('Area: ${dvf.buildingArea}m²'),
-            Text('Address: ${dvf.fullAddress}'),
-            Text('Date: ${dvf.formattedDate}'),
+            Text('Type: ${dvf.realtyType}'),
+            Text('Rooms: ${dvf.attributes.rooms}'),
+            Text('Area: ${dvf.attributes.landArea}m²'),
+            Text('Address: ${dvf.location.address}'),
+            Text('Date: ${dvf.txDate}'),
           ],
         ),
       ),
@@ -703,6 +712,17 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
                 ),
               ),
             ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              ).then((_) => _loadData());
+            },
+          ),
           // Add parcel toggle switch
           if (_selectedCommune != null)
             Switch(
