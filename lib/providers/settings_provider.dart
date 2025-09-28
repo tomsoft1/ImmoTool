@@ -84,22 +84,22 @@ class SettingsProvider with ChangeNotifier {
         break;
     }
 
-    return 'Date_établissement_DPE:[${start.toString().split(' ')[0]} TO ${end.toString().split(' ')[0]}]';
+    return 'date_etablissement_dpe:[${start.toString().split(' ')[0]} TO ${end.toString().split(' ')[0]}]';
   }
 
   String getDpeGradesQuery() {
     if (_selectedDpeGrades.isEmpty) return '';
-    return 'Etiquette_DPE:(${_selectedDpeGrades.map((g) => '"$g"').join(' OR ')})';
+    return 'etiquette_dpe:(${_selectedDpeGrades.map((g) => '"$g"').join(' OR ')})';
   }
 
   String getSurfaceQuery() {
     if (_minSurface == 0 && _maxSurface == 0) return '';
     final List<String> conditions = [];
     if (_minSurface > 0) {
-      conditions.add('Surface_habitable_logement:>=$_minSurface');
+      conditions.add('surface_thermique_lot:>=$_minSurface');
     }
     if (_maxSurface > 0) {
-      conditions.add('Surface_habitable_logement:<=$_maxSurface');
+      conditions.add('surface_thermique_lot:<=$_maxSurface');
     }
     return conditions.join(' AND ');
   }

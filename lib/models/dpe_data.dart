@@ -31,8 +31,8 @@ class DpeData {
   @JsonKey(name: 'classe_estimation_ges', defaultValue: 'N/A')
   final String gesGrade;
 
-  @JsonKey(name: 'estimation_ges', defaultValue: 0)
-  final int gesValue;
+//  @JsonKey(name: 'estimation_ges', defaultValue: 0)
+//  final int gesValue;
 
   @JsonKey(name: 'surface_thermique_lot', defaultValue: 0)
   final double surface;
@@ -47,7 +47,7 @@ class DpeData {
     required this.energyGrade,
     required this.energyValue,
     required this.gesGrade,
-    required this.gesValue,
+//    required this.gesValue,
     required this.surface,
   });
 
@@ -63,11 +63,11 @@ class DpeData {
 
   factory DpeData.fromJson(Map<String, dynamic> json) {
     json['_id'] ??= json['id'];
-    json['adresse_complete'] ??= json['Adresse_brute'];
+    json['adresse_ban'] ??= json['Adresse_brute'];
     json['geo_adresse'] ??= json['Adresse_brute'];
-    json['classe_consommation_energie'] ??= json['Etiquette_DPE'];
+    json['etiquette_dpe'] ??= json['Etiquette_DPE'];
     json['date_etablissement_dpe'] ??= json['Date_établissement_DPE'];
-    json['surface_thermique_lot'] ??= json['Surface_habitable_logement'];
+    json['surface_habitable_logement'] ??= json['Surface_habitable_logement'];
     final coordinates = json['_geopoint'] as String;
     if (coordinates.isNotEmpty) {
       final listCoord =

@@ -26,18 +26,123 @@ class ImmoDataDvf {
   });
 
   factory ImmoDataDvf.fromJson(Map<String, dynamic> json) {
+    // Calculer le prix au m² si possible
+    double squareMeterPrice = 0.0;
+    if (json['valeur_fonciere'] != null &&
+        json['surface_reelle_bati'] != null) {
+      final price = double.tryParse(json['valeur_fonciere'].toString()) ?? 0.0;
+      final surface =
+          double.tryParse(json['surface_reelle_bati'].toString()) ?? 0.0;
+      if (surface > 0) {
+        squareMeterPrice = price / surface;
+      }
+    }
+
+    // Créer les attributs à partir des nouveaux champs
+    final attributes = DvfAttributes(
+      livingArea: json['surface_reelle_bati'] != null
+          ? double.tryParse(json['surface_reelle_bati'].toString())
+          : null,
+      rooms: json['nombre_pieces_principales'] != null
+          ? double.tryParse(json['nombre_pieces_principales'].toString())
+              ?.toInt()
+          : null,
+      landArea:
+          json['surface_terrain'] != null && json['surface_terrain'] != 'nan'
+              ? double.tryParse(json['surface_terrain'].toString())
+              : null,
+    );
+
+    // Créer le lot à partir des nouveaux champs
+    final lot = <DvfLot>[];
+    if (json['id_parcelle'] != null) {
+      final lotData = DvfLot(
+        parcelId: json['id_parcelle'].toString(),
+        landArea:
+            json['surface_terrain'] != null && json['surface_terrain'] != 'nan'
+                ? double.tryParse(json['surface_terrain'].toString()) ?? 0.0
+                : 0.0,
+        realty: [
+          DvfRealty(
+            realtyType: json['code_type_local'] != null
+                ? int.tryParse(json['code_type_local'].toString()) ?? 0
+                : 0,
+            livingArea: json['surface_reelle_bati'] != null
+                ? double.tryParse(json['surface_reelle_bati'].toString())
+                : null,
+            rooms: json['nombre_pieces_principales'] != null
+                ? double.tryParse(json['nombre_pieces_principales'].toString())
+                    ?.toInt()
+                : null,
+          ),
+        ],
+        location: DvfLocation(
+          address: DvfAddress(
+            addressId: json['id_parcelle']?.toString() ?? '',
+            streetNumber: json['adresse_numero']?.toString() ?? '',
+            streetSuffix: json['adresse_suffixe']?.toString() ?? '',
+            streetType: '',
+            streetName: json['adresse_nom_voie']?.toString() ?? '',
+            streetCode: json['adresse_code_voie']?.toString() ?? '',
+            postCode: json['code_postal']?.toString() ?? '',
+            cityName: json['nom_commune']?.toString() ?? '',
+            departmentCode: json['code_departement']?.toString() ?? '',
+            inseeCode: json['code_commune']?.toString() ?? '',
+            districtCode: '',
+            subdistrictCode: '',
+          ),
+          geometry: DvfGeometry(
+            type: 'Point',
+            coordinates: [
+              double.tryParse(json['longitude']?.toString() ?? '0') ?? 0.0,
+              double.tryParse(json['latitude']?.toString() ?? '0') ?? 0.0,
+            ],
+          ),
+          isDefault: true,
+        ),
+      );
+      lot.add(lotData);
+    }
+
     return ImmoDataDvf(
-      txDate: json['txDate'],
-      txType: json['txType'],
-      realtyType: json['realtyType'],
-      price: json['price'].toDouble(),
-      attributes: DvfAttributes.fromJson(json['attributes']),
-      lot: (json['lot'] as List).map((e) => DvfLot.fromJson(e)).toList(),
-      txId: json['txId'],
-      squareMeterPrice: json['squareMeterPrice'].toDouble(),
-      txGroupId: json['txGroupId'],
-      location: DvfLocation.fromJson(json['location']),
-      slug: json['slug'],
+      txDate: json['date_mutation']?.toString() ?? '',
+      txType: 1, // Valeur par défaut pour "Vente"
+      realtyType: json['code_type_local'] != null
+          ? int.tryParse(json['code_type_local'].toString()) ?? 0
+          : 0,
+      price: json['valeur_fonciere'] != null
+          ? double.tryParse(json['valeur_fonciere'].toString()) ?? 0.0
+          : 0.0,
+      attributes: attributes,
+      lot: lot,
+      txId: json['id_mutation']?.toString() ?? '',
+      squareMeterPrice: squareMeterPrice,
+      txGroupId: json['id_mutation']?.toString() ?? '',
+      location: DvfLocation(
+        address: DvfAddress(
+          addressId: json['id_parcelle']?.toString() ?? '',
+          streetNumber: json['adresse_numero']?.toString() ?? '',
+          streetSuffix: json['adresse_suffixe']?.toString() ?? '',
+          streetType: '',
+          streetName: json['adresse_nom_voie']?.toString() ?? '',
+          streetCode: json['adresse_code_voie']?.toString() ?? '',
+          postCode: json['code_postal']?.toString() ?? '',
+          cityName: json['nom_commune']?.toString() ?? '',
+          departmentCode: json['code_departement']?.toString() ?? '',
+          inseeCode: json['code_commune']?.toString() ?? '',
+          districtCode: '',
+          subdistrictCode: '',
+        ),
+        geometry: DvfGeometry(
+          type: 'Point',
+          coordinates: [
+            double.tryParse(json['longitude']?.toString() ?? '0') ?? 0.0,
+            double.tryParse(json['latitude']?.toString() ?? '0') ?? 0.0,
+          ],
+        ),
+        isDefault: true,
+      ),
+      slug: json['id_mutation']?.toString() ?? '',
     );
   }
 }
