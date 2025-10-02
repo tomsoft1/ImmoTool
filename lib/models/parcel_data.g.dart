@@ -7,17 +7,15 @@ part of 'parcel_data.dart';
 // **************************************************************************
 
 ParcelData _$ParcelDataFromJson(Map<String, dynamic> json) => ParcelData(
-      id: json['id'] as String,
-      communeCode: json['commune'] as String,
-      prefix: json['prefixe'] as String,
-      section: json['section'] as String,
-      number: json['numero'] as String,
-      area: (json['contenance'] as num).toInt(),
-      geometry: json['geometry'] as Map<String, dynamic>,
-      createdDate: json['created'] as String,
-      updatedDate: json['updated'] as String,
-      parcelId: json['id_parcelle'] as String? ?? '',
-    );
+    id: json['id'] as String,
+    communeCode: json['commune'] as String,
+    prefix: json['prefixe'] as String,
+    section: json['section'] as String,
+    number: json['numero'] as String,
+    area: (json['contenance'] as num).toInt(),
+    geometry: json['geometry'] as Map<String, dynamic>,
+    createdDate: json['created'] as String,
+    updatedDate: json['updated'] as String);
 
 Map<String, dynamic> _$ParcelDataToJson(ParcelData instance) =>
     <String, dynamic>{
@@ -29,6 +27,5 @@ Map<String, dynamic> _$ParcelDataToJson(ParcelData instance) =>
       'contenance': instance.area,
       'geometry': instance.geometry,
       'created': instance.createdDate,
-      'updated': instance.updatedDate,
-      'id_parcelle': instance.parcelId,
+      'updated': instance.updatedDate
     };

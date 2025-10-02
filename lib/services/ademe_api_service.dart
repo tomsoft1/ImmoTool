@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../models/dpe_data.dart';
 import '../providers/settings_provider.dart';
 
+// ignore_for_file: avoid_print
 class AdemeApiService {
   // API DPE Logements neufs (depuis juillet 2021) - Documentation officielle
   static const String dpeNewUrl =

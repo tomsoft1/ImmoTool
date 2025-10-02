@@ -32,21 +32,16 @@ class ParcelData {
   @JsonKey(name: 'updated')
   final String updatedDate;
 
-  @JsonKey(name: 'id_parcelle', defaultValue: '')
-  final String parcelId;
-
-  ParcelData({
-    required this.id,
-    required this.communeCode,
-    required this.prefix,
-    required this.section,
-    required this.number,
-    required this.area,
-    required this.geometry,
-    required this.createdDate,
-    required this.updatedDate,
-    required this.parcelId,
-  });
+  ParcelData(
+      {required this.id,
+      required this.communeCode,
+      required this.prefix,
+      required this.section,
+      required this.number,
+      required this.area,
+      required this.geometry,
+      required this.createdDate,
+      required this.updatedDate});
 
   factory ParcelData.fromJson(Map<String, dynamic> json) =>
       _$ParcelDataFromJson(json);

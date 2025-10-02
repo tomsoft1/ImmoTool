@@ -296,11 +296,8 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
     try {
       // Load DVF data using parcel ID
       final dvfDataList = await _dvfService.getDvfData(
-        communeCode: parcel.communeCode,
-        parcelCode: parcel.parcelId.isEmpty
-            ? parcel.prefix + parcel.section
-            : parcel.parcelId,
-      );
+          communeCode: parcel.communeCode,
+          parcelCode: parcel.prefix + parcel.section);
 
       // Sort transactions by date, most recent first
       dvfDataList.sort((a, b) => b.txDate.compareTo(a.txDate));
@@ -343,10 +340,9 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
                                   Text(
                                       'Price: ${dvf.price.toStringAsFixed(2)}€'),
                                   Text('Type: ${dvf.realtyType}'),
-                                  if (dvf.attributes.landArea! > 0)
-                                    Text('Area: ${dvf.attributes.landArea}m²'),
-                                  if (dvf.attributes.rooms! > 0)
-                                    Text('Rooms: ${dvf.attributes.rooms}'),
+                                  if (dvf.attributes.livingArea! > 0)
+                                    Text(
+                                        'Area: ${dvf.attributes.livingArea}m²'),
                                 ],
                               ),
                             ),
@@ -474,8 +470,7 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
   List<Marker> _getDvfMarkers(List<ImmoDataDvf> dvfDataList) {
     return dvfDataList.map((dvf) {
       return Marker(
-        point: LatLng(
-            dvf.location.geometry.latitude, dvf.location.geometry.longitude),
+        point: LatLng(dvf.location.latitude, dvf.location.longitude),
         width: 40,
         height: 40,
         child: GestureDetector(
@@ -542,7 +537,8 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
             Text('Type: ${dvf.realtyType}'),
             Text('Rooms: ${dvf.attributes.rooms}'),
             Text('Area: ${dvf.attributes.landArea}m²'),
-            Text('Address: ${dvf.location.address}'),
+            Text(
+                'Address: ${dvf.location.streetNumber} ${dvf.location.streetSuffix} ${dvf.location.streetType} ${dvf.location.streetName} ${dvf.location.postCode} ${dvf.location.cityName}'),
             Text('Date: ${dvf.txDate}'),
           ],
         ),

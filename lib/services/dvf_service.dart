@@ -55,9 +55,9 @@ class DvfService implements RealEstateDataService<ImmoDataDvf> {
   @override
   List<Marker> convertToMarkers(BuildContext context, List<ImmoDataDvf> data) {
     return data.map((dvf) {
-      final coordinates = dvf.location.geometry.coordinates;
+      final coordinates = LatLng(dvf.location.latitude, dvf.location.longitude);
       return Marker(
-        point: LatLng(coordinates[1], coordinates[0]),
+        point: coordinates,
         width: 80,
         height: 80,
         child: GestureDetector(
