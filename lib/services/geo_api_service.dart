@@ -53,10 +53,10 @@ class Commune {
       postalCode: json['codesPostaux']?.first ?? '',
       department: json['codeDepartement'] ?? '',
       latitude: double.tryParse(
-              json['centre']?['coordinates']?[1]?.toString() ?? '0') ??
+              json['geometry']?['coordinates']?[1]?.toString() ?? '0') ??
           0,
       longitude: double.tryParse(
-              json['centre']?['coordinates']?[0]?.toString() ?? '0') ??
+              json['geometry']?['coordinates']?[0]?.toString() ?? '0') ??
           0,
       population: json['population'] ?? 0,
       geometry: json['geometry'],

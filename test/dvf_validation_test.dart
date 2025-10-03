@@ -111,7 +111,7 @@ Future<void> testDataValidation(
           '   - Taux de validité: ${(validTransactions / dvfData.length * 100).toStringAsFixed(1)}%');
 
       if (invalidTransactions > 0) {
-        print('⚠️ ${invalidTransactions} transactions invalides détectées');
+        print('⚠️ $invalidTransactions transactions invalides détectées');
 
         // Analyse des problèmes les plus fréquents
         final issueCounts = <String, int>{};
@@ -233,8 +233,8 @@ Future<void> testConstraintValidation(
     // Test avec des contraintes de prix
     print('\n📊 Test avec contraintes de prix');
     final bounds = LatLngBounds(
-      LatLng(48.8566, 2.3522),
-      LatLng(48.8606, 2.3562),
+      const LatLng(48.8566, 2.3522),
+      const LatLng(48.8606, 2.3562),
     );
 
     try {
@@ -410,7 +410,7 @@ Future<void> testFormatValidation(
           '   - Taux de validité: ${(validFormats / dvfData.length * 100).toStringAsFixed(1)}%');
 
       if (invalidFormats > 0) {
-        print('⚠️ ${invalidFormats} formats invalides détectés');
+        print('⚠️ $invalidFormats formats invalides détectés');
 
         // Analyse des problèmes de format les plus fréquents
         final formatIssueCounts = <String, int>{};
@@ -475,7 +475,7 @@ Future<void> testLimitValidation(
         for (final price in prices) {
           if (price < 1 || price > 10000000) {
             pricesWithinLimits = false;
-            print('❌ Prix hors limites: ${price}€');
+            print('❌ Prix hors limites: $price€');
             break;
           }
         }

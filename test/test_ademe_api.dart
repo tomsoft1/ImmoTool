@@ -282,7 +282,7 @@ Future<void> testRateLimiting(
   print('🔍 Test de respect des limites de taux (10 appels/seconde)...');
 
   final startTime = DateTime.now();
-  final callCount = 5; // Nombre d'appels à effectuer
+  const callCount = 5; // Nombre d'appels à effectuer
 
   for (int i = 0; i < callCount; i++) {
     try {

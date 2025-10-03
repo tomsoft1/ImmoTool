@@ -189,7 +189,7 @@ Future<void> testApiStability(
     print('🔍 Test de stabilité de l\'API');
 
     // Test avec plusieurs appels répétés
-    final testCount = 10;
+    const testCount = 10;
     final results = <List<ImmoDataDvf>>[];
     final errors = <String>[];
 
@@ -235,8 +235,8 @@ Future<void> testApiStability(
       // Test de stabilité avec bounds
       print('\n📊 Test de stabilité avec bounds');
       final bounds = LatLngBounds(
-        LatLng(48.8566, 2.3522),
-        LatLng(48.8606, 2.3562),
+        const LatLng(48.8566, 2.3522),
+        const LatLng(48.8606, 2.3562),
       );
 
       final boundsResults = <List<ImmoDataDvf>>[];
@@ -314,8 +314,8 @@ Future<void> testResultConsistency(
       // Test de cohérence avec bounds
       print('\n📊 Test de cohérence avec bounds');
       final bounds = LatLngBounds(
-        LatLng(48.8566, 2.3522),
-        LatLng(48.8606, 2.3562),
+        const LatLng(48.8566, 2.3522),
+        const LatLng(48.8606, 2.3562),
       );
 
       final boundsResults = <List<ImmoDataDvf>>[];
@@ -361,7 +361,7 @@ Future<void> testPerformanceRegression(
     print('🔍 Test de performance de régression');
 
     // Test de performance avec appels répétés
-    final testCount = 10;
+    const testCount = 10;
     final durations = <int>[];
 
     for (int i = 0; i < testCount; i++) {
@@ -400,8 +400,8 @@ Future<void> testPerformanceRegression(
         final start = DateTime.now();
 
         final bounds = LatLngBounds(
-          LatLng(48.8566, 2.3522),
-          LatLng(48.8606, 2.3562),
+          const LatLng(48.8566, 2.3522),
+          const LatLng(48.8606, 2.3562),
         );
 
         await dvfService.getData(

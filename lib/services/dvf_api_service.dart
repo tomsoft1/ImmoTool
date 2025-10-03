@@ -17,7 +17,7 @@ class DvfApiService {
   static const Duration _cacheDuration = Duration(hours: 24);
 
   String _getDvfCacheKey(String communeCode, String parcelCode) {
-    return '${communeCode}_${parcelCode}';
+    return '${communeCode}_$parcelCode';
   }
 
   Future<List<ImmoDataDvf>> getDvfData({

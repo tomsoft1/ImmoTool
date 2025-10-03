@@ -215,7 +215,7 @@ Future<void> testDataValidation(
           '   - Taux de validité: ${(validTransactions / dvfData.length * 100).toStringAsFixed(1)}%');
 
       if (invalidTransactions > 0) {
-        print('⚠️ ${invalidTransactions} transactions invalides détectées');
+        print('⚠️ $invalidTransactions transactions invalides détectées');
       } else {
         print('✅ Toutes les transactions sont valides');
       }

@@ -41,7 +41,7 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
   List<Polygon> _communeBoundaries = [];
   List<Polygon> _parcelBoundaries = [];
   LatLng _center = const LatLng(48.8566, 2.3522);
-  DpeGrade _selectedGrade = DpeGrade.all;
+  final DpeGrade _selectedGrade = DpeGrade.all;
   DataLayer _selectedLayer = DataLayer.both;
   Department? _selectedDepartment;
   Commune? _selectedCommune;
@@ -331,26 +331,22 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  ...filteredDvfDataList
-                      .map((dvf) => Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('Date: ${dvf.txDate}'),
-                                  Text(
-                                      'Price: ${dvf.price.toStringAsFixed(2)}€'),
-                                  Text('Type: ${dvf.realtyType}'),
-                                  if (dvf.attributes.livingArea! > 0)
-                                    Text(
-                                        'Area: ${dvf.attributes.livingArea}m²'),
-                                ],
-                              ),
-                            ),
-                          ))
-                      .toList(),
+                  ...filteredDvfDataList.map((dvf) => Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Date: ${dvf.txDate}'),
+                              Text('Price: ${dvf.price.toStringAsFixed(2)}€'),
+                              Text('Type: ${dvf.realtyType}'),
+                              if (dvf.attributes.livingArea! > 0)
+                                Text('Area: ${dvf.attributes.livingArea}m²'),
+                            ],
+                          ),
+                        ),
+                      )),
                 ] else
                   const Text('No transaction history found for this parcel'),
               ],

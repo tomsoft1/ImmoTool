@@ -185,7 +185,7 @@ Future<void> testCompleteWorkflow() async {
         if (allDvfData.isNotEmpty) {
           final coordinates =
               allDvfData.map((d) => d.location.latitude).toList();
-          final latitudes = coordinates.map((c) => c!).toList();
+          final latitudes = coordinates.map((c) => c).toList();
           final longitudes = coordinates.map((c) => c).toList();
 
           final bounds = LatLngBounds(
@@ -332,7 +332,7 @@ Future<void> testDataValidation(
           '   - Taux de validité: ${(validTransactions / dvfData.length * 100).toStringAsFixed(1)}%');
 
       if (invalidTransactions > 0) {
-        print('⚠️ ${invalidTransactions} transactions invalides détectées');
+        print('⚠️ $invalidTransactions transactions invalides détectées');
       } else {
         print('✅ Toutes les transactions sont valides');
       }
