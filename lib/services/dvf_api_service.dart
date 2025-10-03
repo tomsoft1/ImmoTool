@@ -100,9 +100,15 @@ class DvfApiService {
     }
 
     try {
+      final uri = Uri.parse(
+          '$cadastreUrl/bundler/cadastre-etalab/communes/$communeCode/geojson/parcelles');
+      print('Fetching parcels from: ${uri.toString()}');
       final response = await http.get(
-        Uri.parse(
-            '$cadastreUrl/bundler/cadastre-etalab/communes/$communeCode/geojson/parcelles'),
+        uri,
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
       );
 
       if (response.statusCode == 200) {

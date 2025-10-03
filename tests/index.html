@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Découpage administratif — MapLibre</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link
+    href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css"
+    rel="stylesheet"
+  />
+  <style>
+    html, body, #map { height:100%; margin:0; }
+    .tooltip {
+      position:absolute; pointer-events:none; padding:6px 8px;
+      background:#fff; border:1px solid #ddd; border-radius:6px;
+      font:12px system-ui, sans-serif; box-shadow:0 2px 6px rgba(0,0,0,.08);
+      display:none;
+    }
+    .legend {
+      position:absolute; right:10px; bottom:10px; background:#fff; padding:8px 10px;
+      border-radius:8px; border:1px solid #ddd; font:12px system-ui, sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="tooltip" class="tooltip"></div>
+  <div class="legend">Survol : commune/département — clic : code INSEE</div>
+
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+  <script>
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: {
+        version: 8,
+        sources: {
+          decoupage: {
+            type: 'vector',
+            // ⚠️ la magie est ici : on pointe directement le TileJSON
+            url: 'https://openmaptiles.geo.data.gouv.fr/data/decoupage-administratif.json'
+          }
+        },
+        layers: [
+          // Remplissage communes (léger, pour contexte)
+          {
+            id: 'communes-fill',
+            type: 'fill',
+            source: 'decoupage',
+            'source-layer': 'communes',
+            paint: {
+              'fill-opacity': 0.06
+            }
+          },
+          // Lignes communes
+          {
+            id: 'communes-line',
+            type: 'line',
+            source: 'decoupage',
+            'source-layer': 'communes',
+            paint: { 'line-width': 0.3 }
+          },
+          // Remplissage départements (avec focus Gironde)
+          {
+            id: 'departements-fill',
+            type: 'fill',
+            source: 'decoupage',
+            'source-layer': 'departements',
+            paint: {
+              'fill-opacity': [
+                'case',
+                ['==', ['get', 'code'], '33'], 0.30, // Gironde surlignée
+                0.10
+              ]
+            }
+          },
+          // Contours départements
+          {
+            id: 'departements-line',
+            type: 'line',
+            source: 'decoupage',
+            'source-layer': 'departements',
+            paint: { 'line-width': 0.8 }
+          },
+          // Contours régions (au-dessus)
+          {
+            id: 'regions-line',
+            type: 'line',
+            source: 'decoupage',
+            'source-layer': 'regions',
+            paint: { 'line-width': 1.2 }
+          }
+        ]
+      },
+      center: [0.20242, 44.90233], // Gironde
+      zoom: 7.74,
+      attributionControl: true
+    });
+
+    // Pointer + tooltip communes/départements
+    const tooltip = document.getElementById('tooltip');
+    function showTooltip(e, text) {
+      tooltip.style.display = 'block';
+      const { clientX, clientY } = e.originalEvent;
+      tooltip.style.left = clientX + 12 + 'px';
+      tooltip.style.top = clientY + 12 + 'px';
+      tooltip.innerHTML = text;
+    }
+    function hideTooltip() { tooltip.style.display = 'none'; }
+
+    map.on('mousemove', (e) => {
+      const layers = ['communes-fill','departements-fill'];
+      const feats = map.queryRenderedFeatures(e.point, { layers });
+      if (feats.length) {
+        const f = feats[0];
+        const nom = f.properties.nom || '(sans nom)';
+        const code = f.properties.code || '';
+        const niveau = f.layer['source-layer']; // "communes" | "departements"
+        showTooltip(e, `<strong>${nom}</strong><br/>${niveau} — code: ${code}`);
+        map.getCanvas().style.cursor = 'pointer';
+      } else {
+        hideTooltip();
+        map.getCanvas().style.cursor = '';
+      }
+    });
+    map.on('mouseout', hideTooltip);
+
+    // Clic : log code INSEE + zoom sur la géométrie
+    map.on('click', (e) => {
+      const layers = ['communes-fill','departements-fill'];
+      const feats = map.queryRenderedFeatures(e.point, { layers });
+      if (!feats.length) return;
+      const f = feats[0];
+      const code = f.properties.code;
+      console.log('Code sélectionné :', code);
+      // fitBounds sur la bbox du feature (approx via geometry bbox si présente)
+      // Sinon: augmenter le zoom autour du clic
+      if (f.bbox) {
+        map.fitBounds([[f.bbox[0], f.bbox[1]], [f.bbox[2], f.bbox[3]]], { padding: 20, duration: 400 });
+      } else {
+        map.easeTo({ center: e.lngLat, zoom: Math.max(map.getZoom()+0.8, 8) });
+      }
+    });
+  </script>
+</body>
+</html>

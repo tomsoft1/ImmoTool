@@ -79,6 +79,7 @@ class GeoApiService {
   Future<List<Department>> getDepartments() async {
     // Check cache first
     if (_departmentsCache != null) {
+      print('Returning cached departments');
       return _departmentsCache!;
     }
 
@@ -136,6 +137,7 @@ class GeoApiService {
   Future<Map<String, dynamic>?> getDepartmentGeometry(String code) async {
     // Check cache first
     if (_departmentGeometryCache.containsKey(code)) {
+      print('Returning cached department geometry');
       return _departmentGeometryCache[code];
     }
 
@@ -170,6 +172,8 @@ class GeoApiService {
   Future<List<Commune>> getCommunesByDepartment(String departmentCode) async {
     final uri = Uri.parse(
         '$baseUrl/departements/$departmentCode/communes?format=geojson');
+
+    print('Fetching communes by department: $uri');
 
     try {
       final response = await http.get(uri);
@@ -240,6 +244,8 @@ class GeoApiService {
         'format': 'geojson',
       },
     );
+
+    print('Fetching communes by postal code: $uri');
 
     try {
       final response = await http.get(uri);
