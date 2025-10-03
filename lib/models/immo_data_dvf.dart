@@ -22,6 +22,7 @@ class ImmoDataDvf {
     required this.location,
     required this.slug,
   });
+  String get fullAddress => location.fullAddress;
 
   factory ImmoDataDvf.fromJson(Map<String, dynamic> json) {
     // Calculer le prix au m² si possible
@@ -162,6 +163,9 @@ class DvfLocation {
     required this.latitude,
     required this.isDefault,
   });
+
+  String get fullAddress =>
+      '$streetNumber $streetSuffix $streetType $streetName $postCode $cityName';
 
   factory DvfLocation.fromJson(Map<String, dynamic> json) {
     return DvfLocation(

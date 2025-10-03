@@ -1,7 +1,6 @@
 import 'package:flutter_map/flutter_map.dart';
-import 'package:immo_tools/services/dvf_api_service.dart';
-import 'package:immo_tools/services/dvf_service.dart';
-
+import 'package:immo_tools/models/immo_data_dvf.dart';
+import 'package:immo_tools/models/parcel_data.dart';
 import 'package:latlong2/latlong.dart';
 
 // ignore_for_file: avoid_print
@@ -16,6 +15,9 @@ void main() async {
   // Test d'intégration complet
   print('=== Test d\'intégration complet ===');
   await testFullIntegration(dvfApiService, dvfService);
+
+  print('\n=== Test de workflow complet ===');
+  await testCompleteWorkflow(dvfApiService, dvfService);
 
   print('\n=== Test de données réelles ===');
   await testRealData(dvfApiService, dvfService);
@@ -91,6 +93,121 @@ Future<void> testFullIntegration(
     }
   } catch (e) {
     print('❌ Erreur lors du test d\'intégration: $e');
+  }
+}
+
+/// Test de workflow complet
+Future<void> testCompleteWorkflow() async {
+  try {
+    print('🔍 Étape 1: Récupération des parcelles pour plusieurs communes');
+    final communes = ['75101', '75102', '75103'];
+    final allParcels = <ParcelData>[];
+
+    for (final commune in communes) {
+      final parcels = await dvfApiService.getParcelles(commune);
+      allParcels.addAll(parcels);
+      print('📊 Commune $commune: ${parcels.length} parcelles');
+    }
+
+    print('✅ Total: ${allParcels.length} parcelles récupérées');
+
+    if (allParcels.isNotEmpty) {
+      print(
+          '\n🔍 Étape 2: Récupération des données DVF pour les premières parcelles');
+      final allDvfData = <ImmoDataDvf>[];
+
+      for (int i = 0; i < 5 && i < allParcels.length; i++) {
+        final parcel = allParcels[i];
+        final dvfData = await dvfApiService.getDvfData(
+          communeCode: parcel.communeCode,
+          parcelCode: parcel.number,
+          startDate: '2020-01-01',
+          endDate: '2024-01-01',
+        );
+        allDvfData.addAll(dvfData);
+        print('📊 Parcelle ${parcel.id}: ${dvfData.length} transactions');
+      }
+
+      print('✅ Total: ${allDvfData.length} transactions DVF récupérées');
+
+      if (allDvfData.isNotEmpty) {
+        print('\n🔍 Étape 3: Analyse des données récupérées');
+        final prices = allDvfData.map((d) => d.price).toList();
+        final surfaces = allDvfData
+            .map((d) => d.attributes.livingArea)
+            .where((s) => s != null)
+            .toList();
+        final squareMeterPrices = allDvfData
+            .map((d) => d.squareMeterPrice)
+            .where((p) => p > 0)
+            .toList();
+
+        if (prices.isNotEmpty) {
+          final avgPrice = prices.reduce((a, b) => a + b) / prices.length;
+          final minPrice = prices.reduce((a, b) => a < b ? a : b);
+          final maxPrice = prices.reduce((a, b) => a > b ? a : b);
+
+          print('📊 Statistiques des prix:');
+          print('   - Prix moyen: ${avgPrice.toStringAsFixed(0)}€');
+          print('   - Prix min: ${minPrice.toStringAsFixed(0)}€');
+          print('   - Prix max: ${maxPrice.toStringAsFixed(0)}€');
+        }
+
+        if (surfaces.isNotEmpty) {
+          final avgSurface =
+              surfaces.reduce((a, b) => a! + b!)! / surfaces.length;
+          final minSurface = surfaces.reduce((a, b) => a! < b! ? a : b);
+          final maxSurface = surfaces.reduce((a, b) => a! > b! ? a : b);
+
+          print('📊 Statistiques des surfaces:');
+          print('   - Surface moyenne: ${avgSurface.toStringAsFixed(1)}m²');
+          print('   - Surface min: ${minSurface!.toStringAsFixed(1)}m²');
+          print('   - Surface max: ${maxSurface!.toStringAsFixed(1)}m²');
+        }
+
+        if (squareMeterPrices.isNotEmpty) {
+          final avgSquareMeterPrice =
+              squareMeterPrices.reduce((a, b) => a + b) /
+                  squareMeterPrices.length;
+          final minSquareMeterPrice =
+              squareMeterPrices.reduce((a, b) => a < b ? a : b);
+          final maxSquareMeterPrice =
+              squareMeterPrices.reduce((a, b) => a > b ? a : b);
+
+          print('📊 Statistiques des prix au m²:');
+          print(
+              '   - Prix/m² moyen: ${avgSquareMeterPrice.toStringAsFixed(0)}€');
+          print('   - Prix/m² min: ${minSquareMeterPrice.toStringAsFixed(0)}€');
+          print('   - Prix/m² max: ${maxSquareMeterPrice.toStringAsFixed(0)}€');
+        }
+
+        print('\n🔍 Étape 4: Test du service DVF avec bounds calculés');
+        if (allDvfData.isNotEmpty) {
+          final coordinates =
+              allDvfData.map((d) => d.location.latitude).toList();
+          final latitudes = coordinates.map((c) => c!).toList();
+          final longitudes = coordinates.map((c) => c).toList();
+
+          final bounds = LatLngBounds(
+            LatLng(latitudes.reduce((a, b) => a < b ? a : b) - 0.001,
+                longitudes.reduce((a, b) => a < b ? a : b) - 0.001),
+            LatLng(latitudes.reduce((a, b) => a > b ? a : b) + 0.001,
+                longitudes.reduce((a, b) => a > b ? a : b) + 0.001),
+          );
+
+          final boundsData = await dvfService.getData(
+            bounds: bounds,
+            minDate: DateTime(2020, 1, 1),
+            maxDate: DateTime(2024, 1, 1),
+          );
+
+          print(
+              '✅ ${boundsData.length} transactions récupérées avec bounds calculés');
+        }
+      }
+    }
+  } catch (e) {
+    print('❌ Erreur lors du test de workflow: $e');
   }
 }
 

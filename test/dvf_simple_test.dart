@@ -83,6 +83,7 @@ void main() async {
       print('📊 Première transaction:');
       print('   - Date: ${transaction.txDate}');
       print('   - Prix: ${transaction.price}€');
+      print('   - Adresse: ${transaction.fullAddress}');
       print(
           '   - Prix/m²: ${transaction.squareMeterPrice.toStringAsFixed(2)}€');
     }
@@ -158,7 +159,7 @@ void main() async {
     print('   - Prix/m²: ${immoData.squareMeterPrice.toStringAsFixed(2)}€');
     print('   - Surface: ${immoData.attributes.livingArea}m²');
     print('   - Pièces: ${immoData.attributes.rooms}');
-    print('   - Adresse: ${immoData.location.cityName}');
+    print('   - Adresse: ${immoData.fullAddress}');
     print(
         '   - Coordonnées: ${immoData.location.latitude}, ${immoData.location.longitude}');
   } catch (e) {

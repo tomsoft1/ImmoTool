@@ -6,6 +6,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'real_estate_data_service.dart';
 import '../models/immo_data_dvf.dart';
 
+// ignore_for_file: avoid_print
 class DvfService implements RealEstateDataService<ImmoDataDvf> {
   static const String _baseUrl = 'https://www.immo-data.fr/api';
 
@@ -132,6 +133,7 @@ class DvfService implements RealEstateDataService<ImmoDataDvf> {
       }
       return null;
     } catch (e) {
+      print('Error getting property details: $e');
       return null;
     }
   }

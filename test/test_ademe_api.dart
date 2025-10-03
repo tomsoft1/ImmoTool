@@ -1,7 +1,9 @@
 import 'dart:io';
-import 'lib/services/ademe_api_service.dart';
-import 'lib/providers/settings_provider.dart';
 
+import 'package:immo_tools/providers/settings_provider.dart';
+import 'package:immo_tools/services/ademe_api_service.dart';
+
+// ignore_for_file: avoid_print
 /// Programme de test pour l'API ADEME
 /// Ce programme teste les différentes fonctionnalités de l'API DPE
 void main() async {

@@ -48,6 +48,7 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
   bool _isLoadingBoundaries = false;
   bool _isLoadingData = false;
   bool _showParcels = true;
+  bool _showSearchBar = false;
   String? _selectedParcelId;
 
   @override
@@ -298,9 +299,11 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
       final dvfDataList = await _dvfService.getDvfData(
           communeCode: parcel.communeCode,
           parcelCode: parcel.prefix + parcel.section);
-
       // Sort transactions by date, most recent first
-      dvfDataList.sort((a, b) => b.txDate.compareTo(a.txDate));
+      final filteredDvfDataList = dvfDataList
+          .where((dvf) => dvf.location.addressId == parcel.id)
+          .toList()
+        ..sort((a, b) => b.txDate.compareTo(a.txDate));
 
       showModalBottomSheet(
         context: context,
@@ -324,11 +327,11 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
                 if (dvfDataList.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Text(
-                    'Transaction History (${dvfDataList.length})',
+                    'Transaction History (${filteredDvfDataList.length})',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  ...dvfDataList
+                  ...filteredDvfDataList
                       .map((dvf) => Card(
                             margin: const EdgeInsets.only(bottom: 8),
                             child: Padding(
@@ -511,7 +514,7 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
             Text('Grade: ${dpe.energyGrade}'),
             Text('Energy: ${dpe.energyValue} kWh/m²/an'),
             Text('Surface: ${dpe.surface} m²'),
-            Text('Address: ${dpe.geoAddress}'),
+            Text('Address: ${dpe.address}'),
             Text('Date: ${dpe.formattedDate}'),
           ],
         ),
@@ -709,6 +712,14 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
               ),
             ),
           IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: () {
+              setState(() {
+                _showSearchBar = !_showSearchBar;
+              });
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
               Navigator.push(
@@ -817,21 +828,23 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
               ),
             ],
           ),
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: LocationSearchBar(
-              onCommuneSelected: (commune) {
-                setState(() {
-                  _center = LatLng(commune.latitude, commune.longitude);
-                  _mapController.move(_center, 15);
-                });
-                _loadCommuneBoundaries(commune);
-                _loadData();
-              },
+          if (_showSearchBar)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: LocationSearchBar(
+                onCommuneSelected: (commune) {
+                  setState(() {
+                    _center = LatLng(commune.latitude, commune.longitude);
+                    _mapController.move(_center, 15);
+                    _showSearchBar = false; // Hide search bar after selection
+                  });
+                  _loadCommuneBoundaries(commune);
+                  _loadData();
+                },
+              ),
             ),
-          ),
           Positioned(
             right: 16,
             bottom: 100,
