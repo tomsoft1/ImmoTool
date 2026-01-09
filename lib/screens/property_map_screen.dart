@@ -6,8 +6,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:collection/collection.dart';
 import 'dart:math' show cos, sin, sqrt, atan2;
 import 'dart:async' show Timer;
-import 'package:provider/provider.dart';
-import '../services/ademe_api_service.dart';
 import '../services/dvf_api_service.dart';
 import '../services/geo_api_service.dart';
 import '../services/backend_api_service.dart';
@@ -20,7 +18,6 @@ import '../widgets/property_info_card.dart';
 import '../widgets/dvf_marker_with_badge.dart';
 import '../widgets/grouped_dvf_bottom_sheet.dart';
 import '../widgets/dvf_info_card.dart';
-import '../providers/settings_provider.dart';
 import 'settings_screen.dart';
 //import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 // ignore_for_file: avoid_print
@@ -37,7 +34,6 @@ class PropertyMapScreen extends StatefulWidget {
 }
 
 class _PropertyMapScreenState extends State<PropertyMapScreen> {
-  final AdemeApiService _dpeService = AdemeApiService();
   final DvfApiService _dvfService = DvfApiService();
   final BackendApiService _backendService = BackendApiService();
   final GeoApiService _geoService = GeoApiService();
@@ -697,25 +693,6 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
     } catch (e, stackTrace) {
       debugPrint('Error loading DPE data: $e');
       debugPrint('Stack trace: $stackTrace');
-
-      // Fallback to direct API if backend is unavailable
-      debugPrint('Attempting fallback to direct ADEME API...');
-      try {
-        final bbox = _calculateBoundingBox();
-        final settings = context.read<SettingsProvider>();
-        final dpeDataList = await _dpeService.getDpeDataV1(
-            lat: _center.latitude,
-            lng: _center.longitude,
-            bbox: bbox,
-            settings: settings);
-        print('Loaded ${dpeDataList.length} DPE entries from fallback API');
-        final markers = _getFilteredDpeMarkers(dpeDataList);
-        setState(() {
-          _dpeMarkers = markers;
-        });
-      } catch (fallbackError) {
-        debugPrint('Fallback also failed: $fallbackError');
-      }
     }
   }
 
@@ -1285,6 +1262,16 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
                   });
                   _loadCommuneBoundaries(commune);
                   _loadData();
+                },
+                onAddressSelected: (latitude, longitude) {
+                  setState(() {
+                    _center = LatLng(latitude, longitude);
+                    _mapController.move(
+                        _center, 17); // Higher zoom for addresses
+                    _showSearchBar = false; // Hide search bar after selection
+                  });
+                  // Load data for the address location
+                  _loadDataBasedOnZoom(17);
                 },
               ),
             ),

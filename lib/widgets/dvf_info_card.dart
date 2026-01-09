@@ -71,6 +71,26 @@ class DvfInfoCard extends StatelessWidget {
     }
   }
 
+  String _formatAddress(DvfLocation location) {
+    final parts = <String>[];
+    if (location.streetNumber.isNotEmpty) {
+      parts.add(location.streetNumber);
+    }
+    if (location.streetSuffix.isNotEmpty) {
+      parts.add(location.streetSuffix);
+    }
+    if (location.streetName.isNotEmpty) {
+      parts.add(location.streetName);
+    }
+    if (location.postCode.isNotEmpty) {
+      parts.add(location.postCode);
+    }
+    if (location.cityName.isNotEmpty) {
+      parts.add(location.cityName);
+    }
+    return parts.join(' ').trim();
+  }
+
   @override
   Widget build(BuildContext context) {
     final propertyType = _getPropertyTypeName(dvf.realtyType);
@@ -142,6 +162,14 @@ class DvfInfoCard extends StatelessWidget {
           ),
 
           const SizedBox(height: 12),
+
+          // Address row
+          _InfoRow(
+            icon: Icons.location_on,
+            label: 'Adresse',
+            value: _formatAddress(dvf.location),
+          ),
+          const SizedBox(height: 8),
 
           // Info rows
           if (dvf.squareMeterPrice > 0)

@@ -67,9 +67,29 @@ class GroupedDvfBottomSheet extends StatelessWidget {
     }
   }
 
+  String _formatAddress(DvfLocation location) {
+    final parts = <String>[];
+    if (location.streetNumber.isNotEmpty) {
+      parts.add(location.streetNumber);
+    }
+    if (location.streetSuffix.isNotEmpty) {
+      parts.add(location.streetSuffix);
+    }
+    if (location.streetName.isNotEmpty) {
+      parts.add(location.streetName);
+    }
+    if (location.postCode.isNotEmpty) {
+      parts.add(location.postCode);
+    }
+    if (location.cityName.isNotEmpty) {
+      parts.add(location.cityName);
+    }
+    return parts.join(' ').trim();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final address = dvfList.first.location.cityName;
+    final address = _formatAddress(dvfList.first.location);
     final distribution = _getTypeDistribution();
     final avgPrice =
         dvfList.map((d) => d.price).reduce((a, b) => a + b) / dvfList.length;
