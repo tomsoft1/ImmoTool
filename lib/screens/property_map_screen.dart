@@ -3,13 +3,13 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:immo_tools/models/immo_data_dvf.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:collection/collection.dart';
 import 'dart:math' show cos, sin, sqrt, atan2;
 import 'dart:async' show Timer;
 import 'package:provider/provider.dart';
 import '../services/ademe_api_service.dart';
 import '../services/dvf_api_service.dart';
 import '../services/geo_api_service.dart';
+import '../services/backend_api_service.dart';
 import '../models/dpe_data.dart';
 import '../models/parcel_data.dart';
 import '../widgets/location_search_bar.dart';
@@ -32,6 +32,7 @@ class PropertyMapScreen extends StatefulWidget {
 class _PropertyMapScreenState extends State<PropertyMapScreen> {
   final AdemeApiService _dpeService = AdemeApiService();
   final DvfApiService _dvfService = DvfApiService();
+  final BackendApiService _backendService = BackendApiService();
   final GeoApiService _geoService = GeoApiService();
   final MapController _mapController = MapController();
   Timer? _mapMovementDebounce;
@@ -607,16 +608,25 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
 
   Future<void> _loadDpeData() async {
     try {
-      final bbox = _calculateBoundingBox();
-      final settings = context.read<SettingsProvider>();
+      // Get map bounds for backend API
+      final bounds = _mapController.camera.visibleBounds;
+      final north = bounds.north;
+      final south = bounds.south;
+      final east = bounds.east;
+      final west = bounds.west;
+
       print(
-          'Loading DPE data for bbox: $bbox, center: ${_center.latitude}, ${_center.longitude}');
-      final dpeDataList = await _dpeService.getDpeDataV1(
-          lat: _center.latitude,
-          lng: _center.longitude,
-          bbox: bbox,
-          settings: settings);
-      print('Loaded ${dpeDataList.length} DPE entries');
+          'Loading DPE data from backend for bounds: N=$north, S=$south, E=$east, W=$west');
+
+      // Use backend API instead of direct ADEME API
+      final dpeDataList = await _backendService.getDpeRecords(
+        north: north,
+        south: south,
+        east: east,
+        west: west,
+      );
+
+      print('Loaded ${dpeDataList.length} DPE entries from backend');
       final markers = _getFilteredDpeMarkers(dpeDataList);
       print('Created ${markers.length} DPE markers');
       setState(() {
@@ -625,22 +635,71 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
     } catch (e, stackTrace) {
       debugPrint('Error loading DPE data: $e');
       debugPrint('Stack trace: $stackTrace');
+
+      // Fallback to direct API if backend is unavailable
+      debugPrint('Attempting fallback to direct ADEME API...');
+      try {
+        final bbox = _calculateBoundingBox();
+        final settings = context.read<SettingsProvider>();
+        final dpeDataList = await _dpeService.getDpeDataV1(
+            lat: _center.latitude,
+            lng: _center.longitude,
+            bbox: bbox,
+            settings: settings);
+        print('Loaded ${dpeDataList.length} DPE entries from fallback API');
+        final markers = _getFilteredDpeMarkers(dpeDataList);
+        setState(() {
+          _dpeMarkers = markers;
+        });
+      } catch (fallbackError) {
+        debugPrint('Fallback also failed: $fallbackError');
+      }
     }
   }
 
   Future<void> _loadDvfData() async {
     try {
-      if (_selectedCommune != null) {
-        final dvfDataList = await _dvfService.getDvfData(
-            communeCode: _selectedCommune!.code,
-            parcelCode: _selectedParcelId ?? "000BK");
+      // Get map bounds for backend API
+      final bounds = _mapController.camera.visibleBounds;
+      final north = bounds.north;
+      final south = bounds.south;
+      final east = bounds.east;
+      final west = bounds.west;
 
-        setState(() {
-          _dvfMarkers = _getDvfMarkers(dvfDataList);
-        });
-      }
+      print(
+          'Loading DVF data from backend for bounds: N=$north, S=$south, E=$east, W=$west');
+
+      // Use backend API instead of direct DVF API
+      final dvfDataList = await _backendService.getDvfTransactions(
+        north: north,
+        south: south,
+        east: east,
+        west: west,
+      );
+
+      print('Loaded ${dvfDataList.length} DVF transactions from backend');
+      setState(() {
+        _dvfMarkers = _getDvfMarkers(dvfDataList);
+      });
     } catch (e) {
       debugPrint('Error loading DVF data: $e');
+
+      // Fallback to direct API if backend is unavailable
+      if (_selectedCommune != null) {
+        debugPrint('Attempting fallback to direct DVF API...');
+        try {
+          final dvfDataList = await _dvfService.getDvfData(
+              communeCode: _selectedCommune!.code,
+              parcelCode: _selectedParcelId ?? "000BK");
+          print(
+              'Loaded ${dvfDataList.length} DVF transactions from fallback API');
+          setState(() {
+            _dvfMarkers = _getDvfMarkers(dvfDataList);
+          });
+        } catch (fallbackError) {
+          debugPrint('Fallback also failed: $fallbackError');
+        }
+      }
     }
   }
 

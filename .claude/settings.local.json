@@ -3,7 +3,12 @@
     "allow": [
       "Bash(tree:*)",
       "Bash(wc:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git checkout:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter pub get:*)",
+      "Bash(flutter build:*)",
+      "Bash(dart analyze:*)"
     ]
   }
 }
