@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:geocoding/geocoding.dart';
 import '../services/geo_api_service.dart';
-//import 'dart:developer';
+import '../theme/immo_colors.dart';
 
 /// Represents a search result that can be either a commune or an address
 class SearchResult {
@@ -250,18 +250,45 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
+        // Search input field
+        Container(
+          margin: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isDark ? ImmoColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
           child: TextField(
             controller: _searchController,
+            style: TextStyle(
+              color: isDark ? Colors.white : ImmoColors.tertiaryDark,
+            ),
             decoration: InputDecoration(
               hintText: 'Rechercher une ville ou une adresse...',
-              prefixIcon: const Icon(Icons.search),
+              hintStyle: TextStyle(
+                color: isDark ? Colors.white54 : ImmoColors.tertiaryLight,
+              ),
+              prefixIcon: Icon(
+                Icons.search,
+                color: ImmoColors.primary,
+              ),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear),
+                      icon: Icon(
+                        Icons.clear,
+                        color: isDark ? Colors.white54 : ImmoColors.tertiaryLight,
+                      ),
                       onPressed: () {
                         _searchController.clear();
                         setState(() {
@@ -271,10 +298,20 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
                     )
                   : null,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: ImmoColors.primary, width: 2),
               ),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: isDark ? ImmoColors.surfaceDark : Colors.white,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
             onChanged: (value) {
               setState(() {
@@ -283,65 +320,105 @@ class _LocationSearchBarState extends State<LocationSearchBar> {
             },
           ),
         ),
+
+        // Loading indicator
         if (_isLoading)
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: CircularProgressIndicator(),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: ImmoColors.primary,
+              ),
+            ),
           ),
+
+        // Search results dropdown
         if (_searchResults.isNotEmpty)
           Container(
-            constraints: const BoxConstraints(maxHeight: 200),
-            margin: const EdgeInsets.symmetric(horizontal: 8),
+            constraints: const BoxConstraints(maxHeight: 280),
+            margin: const EdgeInsets.symmetric(horizontal: 12),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
+              color: isDark ? ImmoColors.surfaceDark : Colors.white,
+              borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.12),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
-            child: ListView.builder(
-              shrinkWrap: true,
-              itemCount: _searchResults.length,
-              itemBuilder: (context, index) {
-                final result = _searchResults[index];
-                return ListTile(
-                  leading: Icon(
-                    result.isAddress ? Icons.location_on : Icons.location_city,
-                    color: result.isAddress ? Colors.blue : Colors.grey,
-                  ),
-                  title: Text(result.name),
-                  subtitle:
-                      result.subtitle != null && result.subtitle!.isNotEmpty
-                          ? Text(result.subtitle!)
-                          : null,
-                  onTap: () {
-                    if (result.isAddress) {
-                      // Handle address selection
-                      final onAddressSelected = widget.onAddressSelected;
-                      if (onAddressSelected != null) {
-                        onAddressSelected(
-                          result.latitude,
-                          result.longitude,
-                        );
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: _searchResults.length,
+                separatorBuilder: (context, index) => Divider(
+                  height: 1,
+                  color: isDark ? ImmoColors.dividerDark : ImmoColors.divider,
+                  indent: 56,
+                ),
+                itemBuilder: (context, index) {
+                  final result = _searchResults[index];
+                  return ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: result.isAddress
+                            ? ImmoColors.primary.withOpacity(0.1)
+                            : ImmoColors.success.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        result.isAddress ? Icons.location_on : Icons.location_city,
+                        color: result.isAddress ? ImmoColors.primary : ImmoColors.success,
+                        size: 22,
+                      ),
+                    ),
+                    title: Text(
+                      result.name,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : ImmoColors.tertiaryDark,
+                      ),
+                    ),
+                    subtitle: result.subtitle != null && result.subtitle!.isNotEmpty
+                        ? Text(
+                            result.subtitle!,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark ? Colors.white60 : ImmoColors.tertiaryLight,
+                            ),
+                          )
+                        : null,
+                    onTap: () {
+                      if (result.isAddress) {
+                        final onAddressSelected = widget.onAddressSelected;
+                        if (onAddressSelected != null) {
+                          onAddressSelected(
+                            result.latitude,
+                            result.longitude,
+                          );
+                        }
+                      } else {
+                        final commune = result.commune;
+                        if (commune != null) {
+                          widget.onCommuneSelected(commune);
+                        }
                       }
-                    } else {
-                      // Handle commune selection
-                      final commune = result.commune;
-                      if (commune != null) {
-                        widget.onCommuneSelected(commune);
-                      }
-                    }
-                    _searchController.clear();
-                    setState(() {
-                      _searchResults = [];
-                    });
-                  },
-                );
-              },
+                      _searchController.clear();
+                      setState(() {
+                        _searchResults = [];
+                      });
+                    },
+                  );
+                },
+              ),
             ),
           ),
       ],

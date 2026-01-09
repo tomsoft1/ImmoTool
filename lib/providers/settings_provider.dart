@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 
 enum DateRange {
   last3Months,
   last6Months,
+  last12Months,
   custom,
 }
 
@@ -13,6 +15,7 @@ class SettingsProvider with ChangeNotifier {
   DateTime? _startDate;
   DateTime? _endDate;
   DateRange _dateRange = DateRange.last3Months;
+  ThemeMode _themeMode = ThemeMode.system;
 
   Set<String> get selectedDpeGrades => _selectedDpeGrades;
   int get minSurface => _minSurface;
@@ -20,6 +23,41 @@ class SettingsProvider with ChangeNotifier {
   DateTime? get startDate => _startDate;
   DateTime? get endDate => _endDate;
   DateRange get dateRange => _dateRange;
+  ThemeMode get themeMode => _themeMode;
+
+  void setThemeMode(ThemeMode mode) {
+    _themeMode = mode;
+    notifyListeners();
+  }
+
+  void toggleTheme() {
+    _themeMode = _themeMode == ThemeMode.light
+        ? ThemeMode.dark
+        : ThemeMode.light;
+    notifyListeners();
+  }
+
+  void selectAllDpeGrades() {
+    _selectedDpeGrades.addAll(['A', 'B', 'C', 'D', 'E', 'F', 'G']);
+    notifyListeners();
+  }
+
+  void clearAllDpeGrades() {
+    _selectedDpeGrades.clear();
+    notifyListeners();
+  }
+
+  void selectPassoires() {
+    _selectedDpeGrades.clear();
+    _selectedDpeGrades.addAll(['F', 'G']);
+    notifyListeners();
+  }
+
+  void selectEfficients() {
+    _selectedDpeGrades.clear();
+    _selectedDpeGrades.addAll(['A', 'B', 'C']);
+    notifyListeners();
+  }
 
   void toggleDpeGrade(String grade) {
     if (_selectedDpeGrades.contains(grade)) {
@@ -41,6 +79,10 @@ class SettingsProvider with ChangeNotifier {
         break;
       case DateRange.last6Months:
         _startDate = DateTime(now.year, now.month - 6, now.day);
+        _endDate = now;
+        break;
+      case DateRange.last12Months:
+        _startDate = DateTime(now.year - 1, now.month, now.day);
         _endDate = now;
         break;
       case DateRange.custom:
@@ -77,6 +119,9 @@ class SettingsProvider with ChangeNotifier {
         break;
       case DateRange.last6Months:
         start = DateTime(now.year, now.month - 6, now.day);
+        break;
+      case DateRange.last12Months:
+        start = DateTime(now.year - 1, now.month, now.day);
         break;
       case DateRange.custom:
         start = _startDate ?? DateTime(now.year, now.month - 3, now.day);

@@ -11,6 +11,7 @@ import '../services/geo_api_service.dart';
 import '../services/backend_api_service.dart';
 import '../models/dpe_data.dart';
 import '../models/parcel_data.dart';
+import '../theme/immo_colors.dart';
 import '../widgets/location_search_bar.dart';
 import '../widgets/dpe_marker_with_badge.dart';
 import '../widgets/grouped_dpe_bottom_sheet.dart';
@@ -18,8 +19,9 @@ import '../widgets/property_info_card.dart';
 import '../widgets/dvf_marker_with_badge.dart';
 import '../widgets/grouped_dvf_bottom_sheet.dart';
 import '../widgets/dvf_info_card.dart';
+import '../widgets/map/map_control_panel.dart';
+import '../widgets/map/map_info_chip.dart';
 import 'settings_screen.dart';
-//import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
 // ignore_for_file: avoid_print
 
 enum DataLayer { dpe, dvf, both }
@@ -56,6 +58,8 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
   bool _showParcels = true;
   bool _showSearchBar = false;
   String? _selectedParcelId;
+  bool _isMapReady = false;
+  double _currentZoom = 15.0;
 
   @override
   void initState() {
@@ -205,9 +209,9 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
         _departmentBoundaries = polygons
             .map((points) => Polygon(
                   points: points,
-                  color: Colors.blue.withOpacity(0.1),
-                  borderColor: Colors.blue.shade700,
-                  borderStrokeWidth: 3,
+                  color: ImmoColors.departmentFill,
+                  borderColor: ImmoColors.departmentBorder,
+                  borderStrokeWidth: 2,
                   isDotted: false,
                 ))
             .toList();
@@ -215,8 +219,8 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
         _communeBoundaries = polygons
             .map((points) => Polygon(
                   points: points,
-                  color: Colors.green.withOpacity(0.15),
-                  borderColor: Colors.green.shade600,
+                  color: ImmoColors.communeFill,
+                  borderColor: ImmoColors.communeBorder,
                   borderStrokeWidth: 2,
                   isDotted: false,
                 ))
@@ -277,12 +281,12 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
             Polygon(
               points: polygonPoints.first,
               color: parcel.id == _selectedParcelId
-                  ? Colors.blue.withOpacity(0.4)
-                  : Colors.blue.withOpacity(0.1),
+                  ? ImmoColors.parcelSelectedFill
+                  : ImmoColors.parcelFill,
               borderColor: parcel.id == _selectedParcelId
-                  ? Colors.blue.shade700
-                  : Colors.blue.shade300,
-              borderStrokeWidth: parcel.id == _selectedParcelId ? 2.0 : 0.5,
+                  ? ImmoColors.parcelSelectedBorder
+                  : ImmoColors.parcelBorder,
+              borderStrokeWidth: parcel.id == _selectedParcelId ? 2.0 : 1.0,
               isDotted: false,
               label: parcel.id,
             ),
@@ -980,24 +984,7 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
   }
 
   Color _getDpeColor(String energyGrade) {
-    switch (energyGrade.toUpperCase()) {
-      case 'A':
-        return Colors.green;
-      case 'B':
-        return Colors.lightGreen;
-      case 'C':
-        return Colors.yellow;
-      case 'D':
-        return Colors.orange;
-      case 'E':
-        return Colors.deepOrange;
-      case 'F':
-        return Colors.red;
-      case 'G':
-        return Colors.red[900] ?? Colors.red;
-      default:
-        return Colors.grey;
-    }
+    return ImmoColors.getDpeColor(energyGrade);
   }
 
   Future<void> _loadAllDepartmentBoundaries() async {
@@ -1025,9 +1012,9 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
           boundaries.addAll(
             polygons.map((points) => Polygon(
                   points: points,
-                  color: Colors.blue.withOpacity(0.1),
-                  borderColor: Colors.black54,
-                  borderStrokeWidth: 0.5,
+                  color: ImmoColors.departmentFill,
+                  borderColor: ImmoColors.departmentBorder,
+                  borderStrokeWidth: 1.0,
                   isDotted: false,
                 )),
           );
@@ -1108,36 +1095,127 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
     return isInside;
   }
 
+  String _getLayerLabel() {
+    switch (_selectedLayer) {
+      case DataLayer.both:
+        return 'DPE+DVF';
+      case DataLayer.dpe:
+        return 'DPE';
+      case DataLayer.dvf:
+        return 'DVF';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Property Map'),
-        actions: [
-          if (_isLoadingData || _isLoadingBoundaries)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
-                ),
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: ImmoColors.appBarGradient,
+          ),
+        ),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'ImmoTool',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
               ),
             ),
+            if (_selectedCommune != null)
+              Text(
+                _selectedCommune!.name,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.white.withOpacity(0.85),
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          // Search button
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: Icon(
+              _showSearchBar ? Icons.close : Icons.search,
+              color: Colors.white,
+            ),
+            tooltip: 'Rechercher',
             onPressed: () {
               setState(() {
                 _showSearchBar = !_showSearchBar;
               });
             },
           ),
+          // Layer selector
+          PopupMenuButton<DataLayer>(
+            icon: const Icon(Icons.layers, color: Colors.white),
+            tooltip: 'Couches de donnees',
+            initialValue: _selectedLayer,
+            onSelected: (DataLayer layer) {
+              setState(() {
+                _selectedLayer = layer;
+                _loadData();
+              });
+            },
+            itemBuilder: (BuildContext context) => [
+              PopupMenuItem(
+                value: DataLayer.both,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.layers,
+                      size: 20,
+                      color: _selectedLayer == DataLayer.both
+                          ? ImmoColors.primary
+                          : ImmoColors.tertiary,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text('DPE et DVF'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: DataLayer.dpe,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.energy_savings_leaf,
+                      size: 20,
+                      color: _selectedLayer == DataLayer.dpe
+                          ? ImmoColors.primary
+                          : ImmoColors.tertiary,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text('DPE uniquement'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: DataLayer.dvf,
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.euro,
+                      size: 20,
+                      color: _selectedLayer == DataLayer.dvf
+                          ? ImmoColors.primary
+                          : ImmoColors.tertiary,
+                    ),
+                    const SizedBox(width: 12),
+                    const Text('DVF uniquement'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          // Settings button
           IconButton(
-            icon: const Icon(Icons.settings),
+            icon: const Icon(Icons.tune, color: Colors.white),
+            tooltip: 'Filtres',
             onPressed: () {
               Navigator.push(
                 context,
@@ -1147,49 +1225,7 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
               ).then((_) => _loadData());
             },
           ),
-          // Add parcel toggle switch
-          if (_selectedCommune != null)
-            Switch(
-              value: _showParcels,
-              onChanged: (value) async {
-                setState(() {
-                  _showParcels = value;
-                  if (!value) {
-                    _parcelBoundaries.clear();
-                  }
-                });
-                if (value && _selectedCommune != null) {
-                  await _loadParcels(_selectedCommune!.code);
-                }
-              },
-              activeColor: Colors.orange,
-            ),
-          PopupMenuButton<DataLayer>(
-            icon: const Icon(Icons.layers),
-            tooltip: 'Select layers',
-            initialValue: _selectedLayer,
-            onSelected: (DataLayer layer) {
-              setState(() {
-                _selectedLayer = layer;
-                _loadData();
-              });
-            },
-            itemBuilder: (BuildContext context) => [
-              const PopupMenuItem(
-                value: DataLayer.both,
-                child: Text('Show Both'),
-              ),
-              const PopupMenuItem(
-                value: DataLayer.dpe,
-                child: Text('DPE Only'),
-              ),
-              const PopupMenuItem(
-                value: DataLayer.dvf,
-                child: Text('DVF Only'),
-              ),
-            ],
-          ),
-          const SizedBox(width: 8), // Add some padding at the end
+          const SizedBox(width: 4),
         ],
       ),
       body: Stack(
@@ -1197,9 +1233,22 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              center: _center,
-              zoom: 15,
-              onPositionChanged: _handleMapMovement,
+              initialCenter: _center,
+              initialZoom: 15,
+              onMapReady: () {
+                setState(() {
+                  _isMapReady = true;
+                  _currentZoom = _mapController.camera.zoom;
+                });
+              },
+              onPositionChanged: (position, hasGesture) {
+                if (position.zoom != null) {
+                  setState(() {
+                    _currentZoom = position.zoom!;
+                  });
+                }
+                _handleMapMovement(position, hasGesture);
+              },
               onTap: (tapPosition, point) {
                 // Find tapped parcel
                 for (final polygon in _parcelBoundaries) {
@@ -1275,36 +1324,103 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
                 },
               ),
             ),
+          // Map control panel (right side)
           Positioned(
             right: 16,
             bottom: 100,
-            child: Column(
-              children: [
-                FloatingActionButton.small(
-                  heroTag: "zoom_in",
-                  onPressed: () {
-                    final newZoom = _mapController.camera.zoom + 1;
-                    _mapController.move(_mapController.camera.center, newZoom);
-                  },
-                  child: const Icon(Icons.add),
-                ),
-                const SizedBox(height: 8),
-                FloatingActionButton.small(
-                  heroTag: "zoom_out",
-                  onPressed: () {
-                    final newZoom = _mapController.camera.zoom - 1;
-                    _mapController.move(_mapController.camera.center, newZoom);
-                  },
-                  child: const Icon(Icons.remove),
-                ),
-              ],
+            child: MapControlPanel(
+              onZoomIn: () {
+                final newZoom = _mapController.camera.zoom + 1;
+                _mapController.move(_mapController.camera.center, newZoom);
+              },
+              onZoomOut: () {
+                final newZoom = _mapController.camera.zoom - 1;
+                _mapController.move(_mapController.camera.center, newZoom);
+              },
+              onLocate: _getCurrentLocation,
+              isLocating: _isLoadingData,
             ),
+          ),
+
+          // Map info chip (bottom left)
+          if (_isMapReady)
+            Positioned(
+              left: 16,
+              bottom: 24,
+              child: MapInfoChip(
+                zoom: _currentZoom,
+                locationName: _selectedCommune?.name,
+                isLoading: _isLoadingData || _isLoadingBoundaries,
+                layerInfo: _getLayerLabel(),
+              ),
+            ),
+
+          // Parcel toggle (when commune is selected)
+          if (_selectedCommune != null)
+            Positioned(
+              right: 16,
+              top: 16,
+              child: _buildParcelToggle(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildParcelToggle() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: (isDark ? ImmoColors.surfaceDark : Colors.white).withOpacity(0.95),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _getCurrentLocation,
-        child: const Icon(Icons.my_location),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.grid_on,
+            size: 18,
+            color: _showParcels ? ImmoColors.primary : ImmoColors.tertiaryLight,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            'Parcelles',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: isDark ? Colors.white : ImmoColors.tertiaryDark,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Transform.scale(
+            scale: 0.8,
+            child: Switch(
+              value: _showParcels,
+              onChanged: (value) async {
+                setState(() {
+                  _showParcels = value;
+                  if (!value) {
+                    _parcelBoundaries.clear();
+                  }
+                });
+                if (value && _selectedCommune != null) {
+                  await _loadParcels(_selectedCommune!.code);
+                }
+              },
+              activeColor: ImmoColors.primary,
+            ),
+          ),
+        ],
       ),
     );
   }
