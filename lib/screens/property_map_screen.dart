@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:immo_tools/models/immo_data_dvf.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:collection/collection.dart';
 import 'dart:math' show cos, sin, sqrt, atan2;
 import 'dart:async' show Timer;
 import 'package:provider/provider.dart';
@@ -13,6 +14,12 @@ import '../services/backend_api_service.dart';
 import '../models/dpe_data.dart';
 import '../models/parcel_data.dart';
 import '../widgets/location_search_bar.dart';
+import '../widgets/dpe_marker_with_badge.dart';
+import '../widgets/grouped_dpe_bottom_sheet.dart';
+import '../widgets/property_info_card.dart';
+import '../widgets/dvf_marker_with_badge.dart';
+import '../widgets/grouped_dvf_bottom_sheet.dart';
+import '../widgets/dvf_info_card.dart';
 import '../providers/settings_provider.dart';
 import 'settings_screen.dart';
 //import 'package:flutter_map_cancellable_tile_provider/flutter_map_cancellable_tile_provider.dart';
@@ -606,6 +613,68 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
     return '${swCorner.longitude},${swCorner.latitude},${neCorner.longitude},${neCorner.latitude}';
   }
 
+  /// Group DPE records by EXACT normalized full address
+  ///
+  /// Returns a map where keys are normalized FULL addresses (trimmed, lowercase)
+  /// and values are lists of DPE records at that EXACT address only.
+  /// Only groups if addresses match exactly, not by proximity.
+  /// Skips invalid coordinates (default Paris coordinates) and empty addresses.
+  Map<String, List<DpeData>> _groupDpeByAddress(List<DpeData> dpeList) {
+    final Map<String, List<DpeData>> grouped = {};
+
+    for (final dpe in dpeList) {
+      // Skip invalid coordinates (default Paris)
+      if ((dpe.latitude - 48.8566).abs() < 0.0001 &&
+          (dpe.longitude - 2.3522).abs() < 0.0001) {
+        continue;
+      }
+
+      // Normalize FULL address for exact matching
+      final normalizedAddress = dpe.address.trim().toLowerCase();
+
+      // Skip if address is empty or too short (less than 5 characters)
+      if (normalizedAddress.isEmpty || normalizedAddress.length < 5) {
+        continue;
+      }
+
+      // Only group if EXACT address match
+      grouped.putIfAbsent(normalizedAddress, () => []).add(dpe);
+    }
+
+    return grouped;
+  }
+
+  /// Group DVF transactions by EXACT normalized full address
+  ///
+  /// Returns a map where keys are normalized FULL addresses (number + street + postal code + city)
+  /// and values are lists of DVF transactions at that EXACT address only.
+  /// Only groups if addresses match exactly, not by proximity.
+  Map<String, List<ImmoDataDvf>> _groupDvfByAddress(List<ImmoDataDvf> dvfList) {
+    final Map<String, List<ImmoDataDvf>> grouped = {};
+
+    for (final dvf in dvfList) {
+      // Build complete normalized address: number + street + postal code + city
+      // Only group if EXACT address match
+      final addressParts = [
+        dvf.location.streetNumber.trim(),
+        dvf.location.streetName.trim(),
+        dvf.location.postCode.trim(),
+        dvf.location.cityName.trim(),
+      ].where((part) => part.isNotEmpty).join(' ');
+
+      final normalizedAddress = addressParts.toLowerCase();
+
+      // Skip if address is empty or invalid
+      if (normalizedAddress.isEmpty) {
+        continue;
+      }
+
+      grouped.putIfAbsent(normalizedAddress, () => []).add(dvf);
+    }
+
+    return grouped;
+  }
+
   Future<void> _loadDpeData() async {
     try {
       // Get map bounds for backend API
@@ -703,9 +772,15 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
     }
   }
 
+  /// Create DPE markers with grouping by address and count badges
+  ///
+  /// Filters by selected grade, groups by address, and creates markers
+  /// with DpeMarkerWithBadge widget showing property count.
   List<Marker> _getFilteredDpeMarkers(List<DpeData> dpeDataList) {
     print(
         'Filtering ${dpeDataList.length} DPE entries, selected grade: ${_selectedGrade.name}');
+
+    // 1. Filter by grade first (existing logic)
     final filtered = dpeDataList.where((dpe) {
       final matches = _selectedGrade == DpeGrade.all ||
           dpe.energyGrade.toLowerCase() == _selectedGrade.name;
@@ -714,112 +789,220 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
             'Filtered out DPE: grade=${dpe.energyGrade}, lat=${dpe.latitude}, lng=${dpe.longitude}');
       }
       return matches;
-    }).map((dpe) {
-      print(
-          'Creating marker for DPE: grade=${dpe.energyGrade}, lat=${dpe.latitude}, lng=${dpe.longitude}');
+    }).toList();
+
+    print('Filtered to ${filtered.length} DPE entries');
+
+    // 2. NEW: Group by EXACT address
+    final grouped = _groupDpeByAddress(filtered);
+    print('Grouped into ${grouped.length} unique addresses (EXACT match only)');
+
+    // Log grouped addresses with multiple properties
+    for (final entry in grouped.entries) {
+      if (entry.value.length > 1) {
+        print(
+            '  → Address "${entry.key}" has ${entry.value.length} DPE records (will show badge)');
+      }
+    }
+
+    // 3. NEW: Create markers with badges
+    final markers = grouped.entries.map((entry) {
+      final dpeList = entry.value;
+      final count = dpeList.length;
+
+      // Use first DPE for coordinates and primary grade
+      final primaryDpe = dpeList.first;
+
       return Marker(
-        point: LatLng(dpe.latitude, dpe.longitude),
-        width: 30,
-        height: 30,
+        point: LatLng(primaryDpe.latitude, primaryDpe.longitude),
+        width: 40, // Increased from 30 for better touch target
+        height: 40,
         child: GestureDetector(
-          onTap: () => _showDpeInfo(dpe),
-          child: Container(
-            decoration: BoxDecoration(
-              color: _getDpeColor(dpe.energyGrade).withOpacity(0.8),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
-            ),
-            child: Center(
-              child: Text(
-                dpe.energyGrade.toUpperCase(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                ),
-              ),
-            ),
+          onTap: () => count > 1
+              ? _showGroupedDpeInfo(dpeList)
+              : _showDpeInfo(primaryDpe),
+          child: DpeMarkerWithBadge(
+            energyGrade: primaryDpe.energyGrade,
+            count: count,
+            color: _getDpeColor(primaryDpe.energyGrade),
           ),
         ),
       );
     }).toList();
-    print('Created ${filtered.length} filtered DPE markers');
-    return filtered;
+
+    print('Created ${markers.length} grouped DPE markers');
+    return markers;
   }
 
+  /// Create DVF markers with grouping by address and count badges
+  ///
+  /// Groups transactions by address and creates markers
+  /// with DvfMarkerWithBadge widget showing transaction count.
   List<Marker> _getDvfMarkers(List<ImmoDataDvf> dvfDataList) {
-    return dvfDataList.map((dvf) {
+    print('Creating DVF markers for ${dvfDataList.length} transactions');
+
+    // Group by EXACT address
+    final grouped = _groupDvfByAddress(dvfDataList);
+    print('Grouped into ${grouped.length} unique addresses (EXACT match only)');
+
+    // Log grouped addresses with multiple transactions
+    for (final entry in grouped.entries) {
+      if (entry.value.length > 1) {
+        print(
+            '  → Address "${entry.key}" has ${entry.value.length} DVF transactions (will show badge)');
+      }
+    }
+
+    // Create markers with badges
+    final markers = grouped.entries.map((entry) {
+      final dvfList = entry.value;
+      final count = dvfList.length;
+
+      // Use first transaction for coordinates
+      final primaryDvf = dvfList.first;
+
       return Marker(
-        point: LatLng(dvf.location.latitude, dvf.location.longitude),
+        point: LatLng(
+            primaryDvf.location.latitude, primaryDvf.location.longitude),
         width: 40,
         height: 40,
         child: GestureDetector(
-          onTap: () => _showDvfInfo(dvf),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.8),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2),
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.euro,
-                color: Colors.white,
-                size: 20,
-              ),
-            ),
+          onTap: () => count > 1
+              ? _showGroupedDvfInfo(dvfList)
+              : _showDvfInfo(primaryDvf),
+          child: DvfMarkerWithBadge(
+            count: count,
+            color: Colors.blue,
           ),
         ),
       );
     }).toList();
+
+    print('Created ${markers.length} grouped DVF markers');
+    return markers;
   }
 
+  /// Show bottom sheet for grouped DPE data (multiple properties at same address)
+  ///
+  /// Displays modern Material 3 sheet with:
+  /// - Address header
+  /// - Statistics (count, avg energy)
+  /// - Grade distribution
+  /// - Scrollable list of all properties
+  void _showGroupedDpeInfo(List<DpeData> dpeList) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => GroupedDpeBottomSheet(
+          dpeList: dpeList,
+        ),
+      ),
+    );
+  }
+
+  /// Show bottom sheet for single DPE data
+  ///
+  /// Displays simplified Material 3 sheet using PropertyInfoCard
+  /// for consistency with grouped view.
   void _showDpeInfo(DpeData dpe) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'DPE Information',
-              style: Theme.of(context).textTheme.titleLarge,
+            // Drag handle
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            const SizedBox(height: 8),
-            Text('Grade: ${dpe.energyGrade}'),
-            Text('Energy: ${dpe.energyValue} kWh/m²/an'),
-            Text('Surface: ${dpe.surface} m²'),
-            Text('Address: ${dpe.address}'),
-            Text('Date: ${dpe.formattedDate}'),
+
+            // Use PropertyInfoCard widget for consistency
+            PropertyInfoCard(
+              dpe: dpe,
+              index: 1,
+              color: _getDpeColor(dpe.energyGrade),
+            ),
           ],
         ),
       ),
     );
   }
 
+  /// Show bottom sheet for grouped DVF transactions (multiple at same address)
+  ///
+  /// Displays modern Material 3 sheet with:
+  /// - Address header
+  /// - Statistics (count, avg price, price range)
+  /// - Property type distribution
+  /// - Scrollable list of all transactions
+  void _showGroupedDvfInfo(List<ImmoDataDvf> dvfList) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => GroupedDvfBottomSheet(
+          dvfList: dvfList,
+        ),
+      ),
+    );
+  }
+
+  /// Show bottom sheet for single DVF transaction
+  ///
+  /// Displays simplified Material 3 sheet using DvfInfoCard
+  /// for consistency with grouped view.
   void _showDvfInfo(ImmoDataDvf dvf) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Property Transaction',
-              style: Theme.of(context).textTheme.titleLarge,
+            // Drag handle
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            const SizedBox(height: 8),
-            Text('Price: ${dvf.price.toStringAsFixed(2)}€'),
-            Text('Type: ${dvf.realtyType}'),
-            Text('Rooms: ${dvf.attributes.rooms}'),
-            Text('Area: ${dvf.attributes.landArea}m²'),
-            Text(
-                'Address: ${dvf.location.streetNumber} ${dvf.location.streetSuffix} ${dvf.location.streetType} ${dvf.location.streetName} ${dvf.location.postCode} ${dvf.location.cityName}'),
-            Text('Date: ${dvf.txDate}'),
+
+            // Use DvfInfoCard widget for consistency
+            DvfInfoCard(
+              dvf: dvf,
+              index: 1,
+            ),
           ],
         ),
       ),
