@@ -380,8 +380,8 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
           transactionMarkers.add(
             Marker(
               point: center,
-              width: 20,
-              height: 20,
+              width: 12,
+              height: 12,
               child: GestureDetector(
                 onTap: () =>
                     _showParcelTransactionInfo(parcel, parcelTransactions),
@@ -389,21 +389,14 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
                   decoration: BoxDecoration(
                     color: Colors.blue.withOpacity(0.9),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
+                    border: Border.all(color: Colors.white, width: 1),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.blue.withOpacity(0.3),
-                        blurRadius: 4,
-                        spreadRadius: 1,
+                        blurRadius: 2,
+                        spreadRadius: 0.5,
                       ),
                     ],
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.euro,
-                      color: Colors.white,
-                      size: 12,
-                    ),
                   ),
                 ),
               ),
@@ -862,10 +855,10 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
       final primaryDvf = dvfList.first;
 
       return Marker(
-        point: LatLng(
-            primaryDvf.location.latitude, primaryDvf.location.longitude),
-        width: 40,
-        height: 40,
+        point:
+            LatLng(primaryDvf.location.latitude, primaryDvf.location.longitude),
+        width: 24,
+        height: 24,
         child: GestureDetector(
           onTap: () => count > 1
               ? _showGroupedDvfInfo(dvfList)

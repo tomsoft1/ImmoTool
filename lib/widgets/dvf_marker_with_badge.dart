@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 /// Custom DVF (transaction) marker widget with badge showing transaction count at address
 ///
 /// Features:
-/// - Circular blue marker with euro icon
+/// - Circular blue marker (simple circle without icon)
 /// - Color-coded background (blue for transactions)
 /// - Count badge in top-right corner (red notification style)
 /// - White border for contrast on all map backgrounds
@@ -23,54 +23,41 @@ class DvfMarkerWithBadge extends StatelessWidget {
     return Stack(
       clipBehavior: Clip.none,
       children: [
-        // Main DVF marker (euro icon)
+        // Main DVF marker (simple circle)
         Container(
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
+            border: Border.all(color: Colors.white, width: 1),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.25),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
+                blurRadius: 2,
+                offset: const Offset(0, 1),
               ),
             ],
-          ),
-          child: const Center(
-            child: Icon(
-              Icons.euro,
-              color: Colors.white,
-              size: 20,
-              shadows: [
-                Shadow(
-                  color: Colors.black26,
-                  blurRadius: 2,
-                ),
-              ],
-            ),
           ),
         ),
 
         // Badge with count (only if count > 1)
         if (count > 1)
           Positioned(
-            top: -4,
-            right: -4,
+            top: -3,
+            right: -3,
             child: Container(
-              padding: const EdgeInsets.all(4),
+              padding: const EdgeInsets.all(2),
               constraints: const BoxConstraints(
-                minWidth: 20,
-                minHeight: 20,
+                minWidth: 10,
+                minHeight: 10,
               ),
               decoration: BoxDecoration(
                 color: Colors.red.shade600,
                 shape: BoxShape.circle,
-                border: Border.all(color: Colors.white, width: 2),
+                border: Border.all(color: Colors.white, width: 1.5),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 3,
+                    blurRadius: 2,
                     offset: const Offset(0, 1),
                   ),
                 ],
@@ -80,7 +67,7 @@ class DvfMarkerWithBadge extends StatelessWidget {
                   count > 99 ? '99+' : count.toString(),
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 10,
+                    fontSize: 8,
                     fontWeight: FontWeight.bold,
                     height: 1.0,
                   ),

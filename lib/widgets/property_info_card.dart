@@ -45,7 +45,8 @@ class PropertyInfoCard extends StatelessWidget {
             children: [
               // Grade badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: color,
                   borderRadius: BorderRadius.circular(8),
@@ -65,8 +66,8 @@ class PropertyInfoCard extends StatelessWidget {
                 child: Text(
                   'Logement #$index',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ),
             ],
