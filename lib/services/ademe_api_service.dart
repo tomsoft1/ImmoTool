@@ -76,13 +76,25 @@ class AdemeApiService {
           return [];
         }
 
-        return (data['results'] as List)
-            .where((json) =>
-                json != null &&
-                json['_geopoint'] != null &&
-                json['_geopoint'].toString().isNotEmpty)
-            .map((json) => DpeData.fromJson(json))
-            .toList();
+        final results = <DpeData>[];
+        for (final json in (data['results'] as List)) {
+          if (json != null &&
+              json['_geopoint'] != null &&
+              json['_geopoint'].toString().isNotEmpty) {
+            try {
+              final dpe = DpeData.fromJson(json);
+              // Verify that coordinates are valid (not default values)
+              if (dpe.latitude != 48.8566 || dpe.longitude != 2.3522) {
+                results.add(dpe);
+              } else {
+                print('Skipping DPE with default coordinates: ${dpe.id}');
+              }
+            } catch (e) {
+              print('Error parsing DPE entry: $e, data: $json');
+            }
+          }
+        }
+        return results;
       } else {
         print('API Error: ${response.statusCode} - ${response.body}');
         throw Exception('Failed to load DPE data: ${response.statusCode}');

@@ -68,14 +68,46 @@ class DpeData {
     json['etiquette_dpe'] ??= json['Etiquette_DPE'];
     json['date_etablissement_dpe'] ??= json['Date_établissement_DPE'];
     json['surface_habitable_logement'] ??= json['Surface_habitable_logement'];
-    final coordinates = json['_geopoint'] as String;
-    if (coordinates.isNotEmpty) {
-      final listCoord =
-          coordinates.split(',').map((e) => double.parse(e)).toList();
-
-      json['latitude'] = listCoord[0];
-      json['longitude'] = listCoord[1];
+    
+    // Parse _geopoint which can be in different formats
+    final geopoint = json['_geopoint'];
+    if (geopoint != null) {
+      try {
+        if (geopoint is String) {
+          // Format: "lat,lng" as string
+          if (geopoint.isNotEmpty) {
+            final listCoord = geopoint
+                .split(',')
+                .map((e) => double.tryParse(e.trim()) ?? 0.0)
+                .toList();
+            if (listCoord.length >= 2) {
+              json['latitude'] = listCoord[0];
+              json['longitude'] = listCoord[1];
+            }
+          }
+        } else if (geopoint is List) {
+          // Format: [lat, lng] as array
+          if (geopoint.length >= 2) {
+            json['latitude'] = (geopoint[0] as num?)?.toDouble() ?? 48.8566;
+            json['longitude'] = (geopoint[1] as num?)?.toDouble() ?? 2.3522;
+          }
+        } else if (geopoint is Map) {
+          // Format: {"lat": ..., "lng": ...} or {"latitude": ..., "longitude": ...}
+          json['latitude'] = (geopoint['lat'] as num?)?.toDouble() ??
+              (geopoint['latitude'] as num?)?.toDouble() ??
+              48.8566;
+          json['longitude'] = (geopoint['lng'] as num?)?.toDouble() ??
+              (geopoint['longitude'] as num?)?.toDouble() ??
+              2.3522;
+        }
+      } catch (e) {
+        // If parsing fails, use default coordinates
+        print('Error parsing _geopoint: $e');
+        json['latitude'] = 48.8566;
+        json['longitude'] = 2.3522;
+      }
     }
+    
     return _$DpeDataFromJson(json);
   }
 

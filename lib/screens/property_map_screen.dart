@@ -609,16 +609,22 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
     try {
       final bbox = _calculateBoundingBox();
       final settings = context.read<SettingsProvider>();
+      print(
+          'Loading DPE data for bbox: $bbox, center: ${_center.latitude}, ${_center.longitude}');
       final dpeDataList = await _dpeService.getDpeDataV1(
           lat: _center.latitude,
           lng: _center.longitude,
           bbox: bbox,
           settings: settings);
+      print('Loaded ${dpeDataList.length} DPE entries');
+      final markers = _getFilteredDpeMarkers(dpeDataList);
+      print('Created ${markers.length} DPE markers');
       setState(() {
-        _dpeMarkers = _getFilteredDpeMarkers(dpeDataList);
+        _dpeMarkers = markers;
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
       debugPrint('Error loading DPE data: $e');
+      debugPrint('Stack trace: $stackTrace');
     }
   }
 
@@ -639,11 +645,19 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
   }
 
   List<Marker> _getFilteredDpeMarkers(List<DpeData> dpeDataList) {
-    return dpeDataList
-        .where((dpe) =>
-            _selectedGrade == DpeGrade.all ||
-            dpe.energyGrade.toLowerCase() == _selectedGrade.name)
-        .map((dpe) {
+    print(
+        'Filtering ${dpeDataList.length} DPE entries, selected grade: ${_selectedGrade.name}');
+    final filtered = dpeDataList.where((dpe) {
+      final matches = _selectedGrade == DpeGrade.all ||
+          dpe.energyGrade.toLowerCase() == _selectedGrade.name;
+      if (!matches) {
+        print(
+            'Filtered out DPE: grade=${dpe.energyGrade}, lat=${dpe.latitude}, lng=${dpe.longitude}');
+      }
+      return matches;
+    }).map((dpe) {
+      print(
+          'Creating marker for DPE: grade=${dpe.energyGrade}, lat=${dpe.latitude}, lng=${dpe.longitude}');
       return Marker(
         point: LatLng(dpe.latitude, dpe.longitude),
         width: 30,
@@ -658,10 +672,11 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
             ),
             child: Center(
               child: Text(
-                dpe.energyGrade,
+                dpe.energyGrade.toUpperCase(),
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
+                  fontSize: 12,
                 ),
               ),
             ),
@@ -669,6 +684,8 @@ class _PropertyMapScreenState extends State<PropertyMapScreen> {
         ),
       );
     }).toList();
+    print('Created ${filtered.length} filtered DPE markers');
+    return filtered;
   }
 
   List<Marker> _getDvfMarkers(List<ImmoDataDvf> dvfDataList) {
